@@ -49,19 +49,25 @@ import { db } from '../config/firebase';
 import { collection, addDoc, getDocs } from 'firebase/firestore';
 
 export async function seedDatabase() {
-  const alunosRef = collection(db, 'alunos');
-  
-  // Verifica se já tem dados
-  const snapshot = await getDocs(alunosRef);
-  if (!snapshot.empty) {
-    console.log('Banco já populado');
-    return;
+  try {
+    const alunosRef = collection(db, 'alunos');
+    
+    // Verifica se já tem dados
+    const snapshot = await getDocs(alunosRef);
+    if (!snapshot.empty) {
+      console.log('✅ Banco já populado com', snapshot.size, 'alunos');
+      return;
+    }
+    
+    console.log('🌱 Populando banco de dados...');
+    
+    // Adiciona os alunos
+    for (const aluno of alunosIniciais) {
+      await addDoc(alunosRef, aluno);
+    }
+    
+    console.log('✅ Banco de dados populado com', alunosIniciais.length, 'alunos!');
+  } catch (error) {
+    console.error('❌ Erro ao popular banco:', error);
   }
-  
-  // Adiciona os alunos
-  for (const aluno of alunosIniciais) {
-    await addDoc(alunosRef, aluno);
-  }
-  
-  console.log('✅ Banco de dados populado com sucesso!');
 }

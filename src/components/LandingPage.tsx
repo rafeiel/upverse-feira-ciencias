@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { collection, query, where, getDocs, addDoc, updateDoc, doc, Timestamp } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc, updateDoc, doc, Timestamp, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
-import { Turma, Aluno, UserSession } from '../types';
+import { Turma, Aluno } from '../types';
 import { seedDatabase } from '../data/seedAlunos';
 
 const LandingPage = () => {
@@ -27,27 +27,41 @@ const LandingPage = () => {
       fetchAlunos();
     } else {
       setFilteredAlunos([]);
+      setShowSuggestions(false);
     }
   }, [selectedTurma, searchText]);
 
   const fetchAlunos = async () => {
     if (!selectedTurma) return;
     
-    const alunosRef = collection(db, 'alunos');
-    const q = query(alunosRef, where('turma', '==', selectedTurma));
-    const snapshot = await getDocs(q);
-    
-    const alunos = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    })) as Aluno[];
-    
-    // Filtrar pelo texto digitado
-    const filtered = alunos.filter(aluno => 
-      aluno.nome.toLowerCase().includes(searchText.toLowerCase())
-    );
-    
-    setFilteredAlunos(filtered);
+    try {
+      console.log('🔍 Buscando alunos da turma:', selectedTurma);
+      const alunosRef = collection(db, 'alunos');
+      const q = query(alunosRef, where('turma', '==', selectedTurma));
+      const snapshot = await getDocs(q);
+      
+      console.log('📦 Documentos encontrados:', snapshot.size);
+      
+      const alunos = snapshot.docs.map(doc => {
+        const data = doc.data();
+        console.log('👤 Aluno:', data);
+        return {
+          id: doc.id,
+          ...data
+        };
+      }) as Aluno[];
+      
+      // Filtrar pelo texto digitado
+      const filtered = alunos.filter(aluno => 
+        aluno.nome.toLowerCase().includes(searchText.toLowerCase())
+      );
+      
+      console.log('✅ Alunos filtrados:', filtered.length);
+      setFilteredAlunos(filtered);
+    } catch (error) {
+      console.error('❌ Erro ao buscar alunos:', error);
+      setError('Erro ao buscar alunos. Verifique a conexão com o Firebase.');
+    }
   };
 
   const handleAlunoSelect = (aluno: Aluno) => {
@@ -65,52 +79,83 @@ const LandingPage = () => {
       const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
       if (userType === 'responsavel' && selectedAluno) {
+        // Buscar dados atualizados do aluno
+        const alunoRef = doc(db, 'alunos', selectedAluno.id);
+        const alunoSnap = await getDoc(alunoRef);
+        
+        if (!alunoSnap.exists()) {
+          setError('Aluno não encontrado no banco de dados.');
+          setIsLoading(false);
+          return;
+        }
+
+        const alunoData = alunoSnap.data() as Aluno;
+        
         // Verificar se já tem 2 responsáveis
-        if (selectedAluno.responsaveis && selectedAluno.responsaveis.length >= 2) {
+        if (alunoData.responsaveis && alunoData.responsaveis.length >= 2) {
           setError(`O limite de 2 responsáveis para ${selectedAluno.nome} já foi atingido. Selecione "Visitante" para continuar.`);
           setIsLoading(false);
           return;
         }
 
         // Adicionar responsável ao aluno
-        const alunoRef = doc(db, 'alunos', selectedAluno.id);
         const newResponsavel = {
           timestamp: Timestamp.now(),
           sessionId
         };
 
         await updateDoc(alunoRef, {
-          responsaveis: [...(selectedAluno.responsaveis || []), newResponsavel]
+          responsaveis: [...(alunoData.responsaveis || []), newResponsavel]
         });
 
         // Criar sessão do usuário
-        const sessionData: Omit<UserSession, 'id'> = {
+        const sessionData = {
+          tipo: 'responsavel' as const,
+          alunoId: selectedAluno.id,
+          alunoNome: selectedAluno.nome,
+          turma: selectedAluno.turma,
+          timestamp: Timestamp.now()
+        };
+
+        const sessionRef = await addDoc(collection(db, 'sessions'), sessionData);
+        
+        console.log('✅ Sessão de responsável criada:', sessionRef.id);
+        
+        // Redirecionar para página de jornada
+        localStorage.setItem('currentSession', JSON.stringify({ 
+          id: sessionRef.id, 
           tipo: 'responsavel',
           alunoId: selectedAluno.id,
           alunoNome: selectedAluno.nome,
           turma: selectedAluno.turma,
           timestamp: new Date()
+        }));
+        window.location.href = '/jornada';
+      } else {
+        // Visitante
+        const sessionData = {
+          tipo: 'visitante' as const,
+          timestamp: Timestamp.now()
         };
 
         const sessionRef = await addDoc(collection(db, 'sessions'), sessionData);
         
-        // Redirecionar para página de jornada
-        localStorage.setItem('currentSession', JSON.stringify({ id: sessionRef.id, ...sessionData }));
-        window.location.href = '/jornada';
-      } else {
-        // Visitante
-        const sessionData: Omit<UserSession, 'id'> = {
+        console.log('✅ Sessão de visitante criada:', sessionRef.id);
+        
+        localStorage.setItem('currentSession', JSON.stringify({ 
+          id: sessionRef.id, 
           tipo: 'visitante',
           timestamp: new Date()
-        };
-
-        const sessionRef = await addDoc(collection(db, 'sessions'), sessionData);
-        localStorage.setItem('currentSession', JSON.stringify({ id: sessionRef.id, ...sessionData }));
+        }));
         window.location.href = '/jornada';
       }
     } catch (err) {
-      console.error(err);
-      setError('Erro ao iniciar jornada. Tente novamente.');
+      console.error('❌ Erro completo:', err);
+      setError('Erro ao iniciar jornada. Verifique a configuração do Firebase no console (F12).');
+    } finally {
+      setIsLoading(false);
+    }
+  };setError('Erro ao iniciar jornada. Verifique a configuração do Firebase.');
     } finally {
       setIsLoading(false);
     }
@@ -121,7 +166,7 @@ const LandingPage = () => {
     (userType === 'responsavel' && selectedTurma && selectedAluno);
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 relative overflow-hidden">
+    <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 pb-24 relative overflow-hidden">
       {/* Efeitos de fundo animados - ocultos no mobile */}
       <div className="absolute inset-0 overflow-hidden hidden md:block">
         {/* Partículas quânticas flutuantes */}
@@ -142,7 +187,10 @@ const LandingPage = () => {
           <img 
             src="/logo-upverse.png" 
             alt="UPverse Logo" 
-            className="w-64 h-64 md:w-80 md:h-80 animate-float quantum-pulse object-contain"
+            className="w-64 h-64 md:w-80 md:h-80 animate-float object-contain"
+            style={{
+              filter: 'drop-shadow(0 0 20px rgba(59, 130, 246, 0.4)) drop-shadow(0 0 40px rgba(147, 51, 234, 0.3))'
+            }}
           />
         </div>
         
@@ -165,7 +213,7 @@ const LandingPage = () => {
             Feira de Ciências • Colégio UP • Macaé
           </p>
           <p className="text-base md:text-lg text-blue-300 font-medium mt-2">
-            13 de setembro de 2025
+            4 de setembro de 2025
           </p>
         </div>
         
@@ -173,8 +221,6 @@ const LandingPage = () => {
         <div className="glass-effect px-6 py-8 mx-auto max-w-lg space-y-6">
           {/* Radio buttons */}
           <div className="space-y-3">
-            <p className="text-white/90 font-medium text-lg mb-4">Selecione seu tipo:</p>
-            
             <label className="flex items-center gap-3 cursor-pointer group">
               <input
                 type="radio"
@@ -312,8 +358,31 @@ const LandingPage = () => {
       </div>
       
       {/* Footer */}
-      <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 text-white/50 text-sm">
-        <p>Desenvolvido para o Colégio UP • 2025</p>
+      <div className="mt-16 text-center text-white/50 text-sm flex items-center justify-center gap-2 flex-wrap">
+        <p>Desenvolvido por</p>
+        <a 
+          href="https://www.instagram.com/rafaeldisoares" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
+        >
+          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+          </svg>
+          @rafaeldisoares
+        </a>
+        <span>para o</span>
+        <a 
+          href="https://www.instagram.com/colegio_up" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="text-blue-400 hover:text-blue-300 transition-colors flex items-center gap-1"
+        >
+          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+          </svg>
+          @colegio_up
+        </a>
       </div>
     </div>
   );
