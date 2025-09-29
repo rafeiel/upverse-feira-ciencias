@@ -69,15 +69,52 @@ const IndexPage = () => {
   }, []);
 
   const handleChangeStudent = () => {
-    const confirmed = confirm(
-      'Atenção! Ao escolher outro aluno, todo o progresso do quebra-cabeça será perdido. Deseja continuar?'
-    );
+    // Modal customizado ao invés de alert
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4';
+    modal.innerHTML = `
+      <div class="bg-slate-800 rounded-lg p-6 max-w-md w-full border border-white/20 shadow-2xl">
+        <h3 class="text-xl font-bold text-white mb-4">Atenção!</h3>
+        <p class="text-white/80 mb-6">
+          Ao escolher outro aluno, todo o progresso do quebra-cabeça será perdido. Deseja continuar?
+        </p>
+        <div class="flex gap-3">
+          <button 
+            id="cancelBtn" 
+            class="flex-1 py-2 px-4 bg-white/10 hover:bg-white/20 rounded-lg text-white font-medium transition-colors"
+          >
+            Cancelar
+          </button>
+          <button 
+            id="confirmBtn" 
+            class="flex-1 py-2 px-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 rounded-lg text-white font-medium transition-all"
+          >
+            Confirmar
+          </button>
+        </div>
+      </div>
+    `;
     
-    if (confirmed) {
+    document.body.appendChild(modal);
+    
+    const confirmBtn = document.getElementById('confirmBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    
+    confirmBtn?.addEventListener('click', () => {
       localStorage.removeItem('currentSession');
       localStorage.removeItem('puzzleProgress');
       window.location.href = '/';
-    }
+    });
+    
+    cancelBtn?.addEventListener('click', () => {
+      document.body.removeChild(modal);
+    });
+    
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        document.body.removeChild(modal);
+      }
+    });
   };
 
   const getNextStep = () => {
@@ -114,40 +151,8 @@ const IndexPage = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-6 py-8 pb-24 relative overflow-hidden">
-      {/* Background: Partículas e circuitos */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-20">
-        {/* Partículas em movimento */}
-        <div className="absolute top-20 left-10 w-1 h-1 bg-cyan-400 rounded-full animate-ping"></div>
-        <div className="absolute top-40 right-20 w-1 h-1 bg-blue-400 rounded-full animate-pulse"></div>
-        <div className="absolute bottom-32 left-1/4 w-1 h-1 bg-purple-400 rounded-full animate-bounce"></div>
-        <div className="absolute bottom-20 right-1/3 w-1 h-1 bg-cyan-300 rounded-full animate-ping"></div>
-        
-        {/* Átomos estáticos */}
-        <div className="absolute top-1/4 left-1/4">
-          <svg width="40" height="40" viewBox="0 0 40 40" className="opacity-30">
-            <circle cx="20" cy="20" r="3" fill="#60a5fa" />
-            <ellipse cx="20" cy="20" rx="15" ry="8" fill="none" stroke="#60a5fa" strokeWidth="1" />
-            <ellipse cx="20" cy="20" rx="8" ry="15" fill="none" stroke="#60a5fa" strokeWidth="1" />
-          </svg>
-        </div>
-        
-        <div className="absolute bottom-1/4 right-1/4">
-          <svg width="40" height="40" viewBox="0 0 40 40" className="opacity-30">
-            <circle cx="20" cy="20" r="3" fill="#a78bfa" />
-            <ellipse cx="20" cy="20" rx="15" ry="8" fill="none" stroke="#a78bfa" strokeWidth="1" />
-            <ellipse cx="20" cy="20" rx="8" ry="15" fill="none" stroke="#a78bfa" strokeWidth="1" />
-          </svg>
-        </div>
-        
-        {/* Trilhas de circuito */}
-        <svg className="absolute top-0 left-0 w-full h-full opacity-10" xmlns="http://www.w3.org/2000/svg">
-          <path d="M 0,100 L 100,100 L 100,200 L 200,200" stroke="#3b82f6" strokeWidth="2" fill="none" />
-          <path d="M 400,50 L 300,50 L 300,150" stroke="#3b82f6" strokeWidth="2" fill="none" />
-          <circle cx="100" cy="100" r="4" fill="#3b82f6" />
-          <circle cx="100" cy="200" r="4" fill="#3b82f6" />
-          <circle cx="300" cy="50" r="4" fill="#3b82f6" />
-        </svg>
-      </div>
+      {/* Background Quântico Unificado */}
+      <QuantumBackground />
 
       <div className="max-w-3xl mx-auto relative z-10">
         {/* Logo */}
@@ -168,14 +173,16 @@ const IndexPage = () => {
             <span className="gradient-text">UPverse</span>
           </h1>
           <h2 className="text-lg md:text-xl text-white/90">
-            do <span className="font-quantum text-cyan-400 tracking-wider">Quântico</span> à Inteligência Artificial
+            do <span className="font-quantum text-cyan-400">Quântico</span> à <span className="font-quantum text-purple-300">Inteligência Artificial</span>
           </h2>
         </div>
 
         {/* Card de informações do usuário */}
-        <div className="glass-effect p-6 mb-6">
+        <div className="text-center mb-6 space-y-2">
+          <p className="text-lg text-white/70">Feira de Ciências 2025</p>
+          
           {session.tipo === 'responsavel' ? (
-            <div className="text-center space-y-2">
+            <div>
               <div className="inline-block px-4 py-1 bg-blue-500/20 border border-blue-500/50 rounded-full mb-2">
                 <span className="text-blue-300 font-medium text-sm">Responsável</span>
               </div>
@@ -183,11 +190,8 @@ const IndexPage = () => {
               <p className="text-lg text-cyan-400">{session.turma}</p>
             </div>
           ) : (
-            <div className="text-center">
-              <div className="inline-block px-4 py-1 bg-purple-500/20 border border-purple-500/50 rounded-full mb-2">
-                <span className="text-purple-300 font-medium text-sm">Visitante</span>
-              </div>
-              <h2 className="text-xl font-bold text-white">Feira de Ciências 2025</h2>
+            <div className="inline-block px-4 py-1 bg-purple-500/20 border border-purple-500/50 rounded-full">
+              <span className="text-purple-300 font-medium text-sm">Visitante</span>
             </div>
           )}
         </div>
@@ -265,7 +269,7 @@ const IndexPage = () => {
             onClick={() => setShowMapModal(true)}
             className="w-full py-3 bg-white/10 hover:bg-white/20 rounded-lg text-white font-medium transition-colors border border-white/20"
           >
-            Ver Mapa da Escola
+            Ver mapa do colégio
           </button>
 
           {/* Botão Escanear QR */}
@@ -281,7 +285,7 @@ const IndexPage = () => {
             onClick={handleChangeStudent}
             className="w-full py-3 bg-white/5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white/80 font-medium transition-colors border border-white/10"
           >
-            Escolher Outro Aluno
+            Escolher outro aluno
           </button>
         </div>
       </div>
@@ -297,7 +301,7 @@ const IndexPage = () => {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold text-white">Mapa da Escola</h3>
+              <h3 className="text-xl font-bold text-white">Mapa do colégio</h3>
               <button
                 onClick={() => setShowMapModal(false)}
                 className="text-white/70 hover:text-white text-2xl"
@@ -307,22 +311,52 @@ const IndexPage = () => {
             </div>
             <img 
               src="/mapa-escola.png" 
-              alt="Mapa da Escola" 
+              alt="Mapa do Colégio" 
               className="w-full h-auto rounded"
             />
           </div>
         </div>
       )}
 
-      {/* Footer */}
+      {/* Footer Unificado */}
       <div className="absolute bottom-4 left-0 right-0">
-        <div className="flex items-center justify-center gap-3">
-          <img 
-            src="/logo-up.png" 
-            alt="Colégio UP" 
-            className="h-8 w-8 object-contain opacity-60"
-          />
-          <span className="text-white/50 text-sm">Colégio UP • 2025</span>
+        <div className="text-center text-white/50 text-sm space-y-2">
+          <div className="flex items-center justify-center gap-2 flex-wrap">
+            <p>Desenvolvido por</p>
+            <a 
+              href="https://www.instagram.com/rafaeldisoares" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-blue-400 hover:text-blue-300 transition-colors inline-flex items-center gap-1"
+            >
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+              </svg>
+              <span>@rafaeldisoares</span>
+            </a>
+          </div>
+          <div className="flex items-center justify-center gap-2 flex-wrap">
+            <span>para o</span>
+            <a 
+              href="https://www.instagram.com/colegio_up" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-blue-400 hover:text-blue-300 transition-colors inline-flex items-center gap-1"
+            >
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+              </svg>
+              <span>@colegio_up</span>
+            </a>
+          </div>
+          <div className="flex items-center justify-center gap-3 mt-2">
+            <img 
+              src="/logo-up.png" 
+              alt="Colégio UP" 
+              className="h-8 w-8 object-contain opacity-60"
+            />
+            <span>Colégio UP • 2025</span>
+          </div>
         </div>
       </div>
     </div>
