@@ -155,10 +155,6 @@ const LandingPage = () => {
     } finally {
       setIsLoading(false);
     }
-  };setError('Erro ao iniciar jornada. Verifique a configuração do Firebase.');
-    } finally {
-      setIsLoading(false);
-    }
   };
 
   const isButtonEnabled = 
