@@ -8,6 +8,7 @@ interface PuzzlePiece {
   turma: string;
   grupo: string;
   collected: boolean;
+  tema: string;
 }
 
 const IndexPage = () => {
