@@ -4,6 +4,7 @@ import { db } from '../config/firebase';
 import { Turma, Aluno } from '../types';
 import { seedDatabase } from '../data/seedAlunos';
 import QuantumBackground from './QuantumBackground';
+import Footer from './Footer';
 
 const LandingPage = () => {
   const [userType, setUserType] = useState<'visitante' | 'responsavel' | null>(null);

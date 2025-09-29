@@ -17,38 +17,34 @@ const IndexPage = () => {
   const [puzzlePieces, setPuzzlePieces] = useState<PuzzlePiece[]>([]);
   const [collectedCount, setCollectedCount] = useState(0);
 
-  // Definir todas as 24 peças do quebra-cabeça
+  // Definir todas as 24 peças do quebra-cabeça na ordem correta
   const allPieces: PuzzlePiece[] = [
-    // 6º ano - 4 grupos
-    { id: 1, turma: '6º', grupo: '1', collected: false },
-    { id: 2, turma: '6º', grupo: '2', collected: false },
-    { id: 3, turma: '6º', grupo: '3', collected: false },
-    { id: 4, turma: '6º', grupo: '4', collected: false },
-    // 7º ano - 3 grupos
-    { id: 5, turma: '7º', grupo: '1', collected: false },
-    { id: 6, turma: '7º', grupo: '2', collected: false },
-    { id: 7, turma: '7º', grupo: '3', collected: false },
-    // 8º ano - 3 grupos
-    { id: 8, turma: '8º', grupo: '1', collected: false },
-    { id: 9, turma: '8º', grupo: '2', collected: false },
-    { id: 10, turma: '8º', grupo: '3', collected: false },
-    // 9º ano - 3 grupos
-    { id: 11, turma: '9º', grupo: '1', collected: false },
-    { id: 12, turma: '9º', grupo: '2', collected: false },
-    { id: 13, turma: '9º', grupo: '3', collected: false },
-    // 1ª série - 6 grupos
-    { id: 14, turma: '1ª', grupo: '1', collected: false },
-    { id: 15, turma: '1ª', grupo: '2', collected: false },
-    { id: 16, turma: '1ª', grupo: '3', collected: false },
-    { id: 17, turma: '1ª', grupo: '4', collected: false },
-    { id: 18, turma: '1ª', grupo: '5', collected: false },
-    { id: 19, turma: '1ª', grupo: '6', collected: false },
-    // 2ª série - 5 grupos
-    { id: 20, turma: '2ª', grupo: '1', collected: false },
-    { id: 21, turma: '2ª', grupo: '2', collected: false },
-    { id: 22, turma: '2ª', grupo: '3', collected: false },
-    { id: 23, turma: '2ª', grupo: '4', collected: false },
-    { id: 24, turma: '2ª', grupo: '5', collected: false },
+    // Salas 1-9
+    { id: 1, turma: '9º', grupo: '1', collected: false, tema: 'Introdução à Ciência Quântica' },
+    { id: 2, turma: '9º', grupo: '2', collected: false, tema: 'Introdução à Ciência Quântica' },
+    { id: 3, turma: '2ª', grupo: '5', collected: false, tema: 'Escape Room Quântico' },
+    { id: 4, turma: '2ª', grupo: '6', collected: false, tema: 'Escape Room Quântico' },
+    { id: 5, turma: '1ª', grupo: '1', collected: false, tema: 'Escape Room Quântico' },
+    { id: 6, turma: '1ª', grupo: '2', collected: false, tema: 'Escape Room Quântico' },
+    { id: 7, turma: '1ª', grupo: '3', collected: false, tema: 'Escape Room Quântico' },
+    { id: 8, turma: '1ª', grupo: '4', collected: false, tema: 'Escape Room Quântico' },
+    { id: 9, turma: '1ª', grupo: '5', collected: false, tema: 'Escape Room Quântico' },
+    { id: 10, turma: '2ª', grupo: '1', collected: false, tema: 'Escape Room Quântico' },
+    { id: 11, turma: '2ª', grupo: '2', collected: false, tema: 'Escape Room Quântico' },
+    { id: 12, turma: '2ª', grupo: '3', collected: false, tema: 'Escape Room Quântico' },
+    { id: 13, turma: '9º', grupo: '3', collected: false, tema: 'Transição - relação com a IA' },
+    // Quadra
+    { id: 14, turma: '6º', grupo: '1', collected: false, tema: 'Aplicações da IA' },
+    { id: 15, turma: '6º', grupo: '2', collected: false, tema: 'Aplicações da IA' },
+    { id: 16, turma: '6º', grupo: '3', collected: false, tema: 'Aplicações da IA' },
+    { id: 17, turma: '6º', grupo: '4', collected: false, tema: 'Aplicações da IA' },
+    { id: 18, turma: '7º', grupo: '1', collected: false, tema: 'Aplicações da IA' },
+    { id: 19, turma: '7º', grupo: '2', collected: false, tema: 'Aplicações da IA' },
+    { id: 20, turma: '7º', grupo: '3', collected: false, tema: 'Aplicações da IA' },
+    { id: 21, turma: '8º', grupo: '1', collected: false, tema: 'Aplicações da IA' },
+    { id: 22, turma: '8º', grupo: '2', collected: false, tema: 'Aplicações da IA' },
+    { id: 23, turma: '8º', grupo: '3', collected: false, tema: 'Aplicações da IA' },
+    { id: 24, turma: '1ª', grupo: '6', collected: false, tema: 'Escape Room Quântico' },
   ];
 
   useEffect(() => {
