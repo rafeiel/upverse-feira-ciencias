@@ -1,11 +1,9 @@
-import React from 'react';
-
 interface LogoProps {
   className?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
-const Logo: React.FC<LogoProps> = ({ className = '', size = 'lg' }) => {
+const Logo = ({ className = '', size = 'lg' }: LogoProps) => {
   const sizeClasses = {
     sm: 'w-32 h-32',
     md: 'w-48 h-48', 
