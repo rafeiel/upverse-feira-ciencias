@@ -1,7 +1,6 @@
-import React from 'react';
 import Logo from './Logo';
 
-const LandingPage: React.FC = () => {
+const LandingPage = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 relative overflow-hidden">
       {/* Efeitos de fundo animados */}
