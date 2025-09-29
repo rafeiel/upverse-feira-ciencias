@@ -164,16 +164,12 @@ const LandingPage = () => {
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 pb-24 relative overflow-hidden">
       {/* Efeitos de fundo animados - ocultos no mobile */}
-      <div className="absolute inset-0 overflow-hidden hidden md:block">
+      <div className="absolute inset-0 overflow-hidden hidden md:block pointer-events-none">
         {/* Partículas quânticas flutuantes */}
         <div className="absolute top-20 left-10 w-2 h-2 bg-blue-400 rounded-full animate-ping opacity-60"></div>
         <div className="absolute top-40 right-20 w-3 h-3 bg-purple-400 rounded-full animate-pulse opacity-40"></div>
         <div className="absolute bottom-32 left-1/4 w-1 h-1 bg-cyan-400 rounded-full animate-bounce opacity-50"></div>
         <div className="absolute bottom-20 right-1/3 w-2 h-2 bg-blue-300 rounded-full animate-ping opacity-30"></div>
-        
-        {/* Ondas quânticas */}
-        <div className="absolute top-1/2 left-0 w-full h-px bg-gradient-to-r from-transparent via-blue-400/30 to-transparent animate-pulse"></div>
-        <div className="absolute top-1/3 left-0 w-full h-px bg-gradient-to-r from-transparent via-purple-400/20 to-transparent animate-pulse delay-1000"></div>
       </div>
       
       {/* Conteúdo principal */}
@@ -204,7 +200,7 @@ const LandingPage = () => {
         </div>
         
         {/* Subtítulo */}
-        <div className="glass-effect px-8 py-6 mx-auto max-w-2xl">
+        <div className="glass-effect px-8 py-6 mx-auto max-w-lg">
           <p className="text-lg md:text-xl text-white/80 leading-relaxed">
             Feira de Ciências • Colégio UP • Macaé
           </p>
@@ -217,6 +213,8 @@ const LandingPage = () => {
         <div className="glass-effect px-6 py-8 mx-auto max-w-lg space-y-6">
           {/* Radio buttons */}
           <div className="space-y-3">
+            <p className="text-white/70 font-medium text-base mb-4">Selecione uma opção:</p>
+            
             <label className="flex items-center gap-3 cursor-pointer group">
               <input
                 type="radio"
