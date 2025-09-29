@@ -3,6 +3,7 @@ import { collection, query, where, getDocs, addDoc, updateDoc, doc, Timestamp, g
 import { db } from '../config/firebase';
 import { Turma, Aluno } from '../types';
 import { seedDatabase } from '../data/seedAlunos';
+import QuantumBackground from './QuantumBackground';
 
 const LandingPage = () => {
   const [userType, setUserType] = useState<'visitante' | 'responsavel' | null>(null);
@@ -163,14 +164,8 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 pb-24 relative overflow-hidden">
-      {/* Efeitos de fundo animados - ocultos no mobile */}
-      <div className="absolute inset-0 overflow-hidden hidden md:block pointer-events-none">
-        {/* Partículas quânticas flutuantes */}
-        <div className="absolute top-20 left-10 w-2 h-2 bg-blue-400 rounded-full animate-ping opacity-60"></div>
-        <div className="absolute top-40 right-20 w-3 h-3 bg-purple-400 rounded-full animate-pulse opacity-40"></div>
-        <div className="absolute bottom-32 left-1/4 w-1 h-1 bg-cyan-400 rounded-full animate-bounce opacity-50"></div>
-        <div className="absolute bottom-20 right-1/3 w-2 h-2 bg-blue-300 rounded-full animate-ping opacity-30"></div>
-      </div>
+      {/* Background Quântico Unificado */}
+      <QuantumBackground />
       
       {/* Conteúdo principal */}
       <div className="relative z-10 text-center space-y-8 max-w-4xl mx-auto w-full">
@@ -193,18 +188,21 @@ const LandingPage = () => {
           </h1>
           
           <h2 className="text-xl md:text-3xl lg:text-4xl font-medium text-white/90 leading-tight">
-            do Quântico à 
+            do <span className="font-quantum text-cyan-400">Quântico</span> à 
             <br className="md:hidden" />
-            <span className="text-cyan-400 font-semibold"> Inteligência Artificial</span>
+            <span className="font-quantum text-purple-300"> Inteligência Artificial</span>
           </h2>
         </div>
         
         {/* Subtítulo */}
-        <div className="glass-effect px-8 py-6 mx-auto max-w-lg">
+        <div className="text-center space-y-2 mx-auto max-w-lg">
           <p className="text-lg md:text-xl text-white/80 leading-relaxed">
-            Feira de Ciências • Colégio UP • Macaé
+            Feira de Ciências
           </p>
-          <p className="text-base md:text-lg text-blue-300 font-medium mt-2">
+          <p className="text-base md:text-lg text-white/70">
+            Colégio UP • Macaé
+          </p>
+          <p className="text-xl md:text-2xl text-blue-300 font-semibold mt-3">
             4 de setembro de 2025
           </p>
         </div>

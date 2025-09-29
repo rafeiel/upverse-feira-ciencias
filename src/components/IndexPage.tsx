@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { UserSession } from '../types';
 import QRScanner from './QRScanner';
+import QuantumBackground from './QuantumBackground';
 
 interface PuzzlePiece {
   id: number;
