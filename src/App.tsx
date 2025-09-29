@@ -1,24 +1,22 @@
 import { useEffect, useState } from 'react';
 import LandingPage from './components/LandingPage';
-import JornadaPage from './components/JornadaPage';
+import IndexPage from './components/IndexPage';
 import './index.css';
 
 function App() {
-  const [currentPage, setCurrentPage] = useState<'home' | 'jornada'>('home');
+  const [currentPage, setCurrentPage] = useState<'home' | 'index'>('home');
 
   useEffect(() => {
-    // Simples roteamento baseado no pathname
     const path = window.location.pathname;
-    if (path === '/jornada') {
-      setCurrentPage('jornada');
+    if (path === '/jornada' || path === '/index') {
+      setCurrentPage('index');
     } else {
       setCurrentPage('home');
     }
 
-    // Listener para mudanças de URL
     const handleLocationChange = () => {
       const path = window.location.pathname;
-      setCurrentPage(path === '/jornada' ? 'jornada' : 'home');
+      setCurrentPage(path === '/jornada' || path === '/index' ? 'index' : 'home');
     };
 
     window.addEventListener('popstate', handleLocationChange);
@@ -27,7 +25,7 @@ function App() {
 
   return (
     <div className="App">
-      {currentPage === 'home' ? <LandingPage /> : <JornadaPage />}
+      {currentPage === 'home' ? <LandingPage /> : <IndexPage />}
     </div>
   );
 }
