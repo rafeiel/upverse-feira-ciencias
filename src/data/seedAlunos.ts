@@ -1,4 +1,4 @@
-import { Aluno, Turma } from '../types';
+import { Aluno } from '../types';
 
 export const alunosIniciais: Omit<Aluno, 'id'>[] = [
   // 6º ano
