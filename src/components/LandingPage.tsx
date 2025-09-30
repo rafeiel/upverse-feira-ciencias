@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { collection, query, where, getDocs, addDoc, updateDoc, doc, Timestamp, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { Turma, Aluno } from '../types';
@@ -7,6 +8,7 @@ import QuantumBackground from './QuantumBackground';
 import Footer from './Footer';
 
 const LandingPage = () => {
+  const navigate = useNavigate();
   const [userType, setUserType] = useState<'visitante' | 'responsavel' | null>(null);
   const [selectedTurma, setSelectedTurma] = useState<Turma | ''>('');
   const [searchText, setSearchText] = useState('');
@@ -132,7 +134,7 @@ const LandingPage = () => {
           turma: selectedAluno.turma,
           timestamp: new Date()
         }));
-        window.location.href = '/jornada';
+        navigate('/jornada');
       } else {
         // Visitante
         const sessionData = {
@@ -149,7 +151,7 @@ const LandingPage = () => {
           tipo: 'visitante',
           timestamp: new Date()
         }));
-        window.location.href = '/jornada';
+        navigate('/jornada');
       }
     } catch (err) {
       console.error('❌ Erro completo:', err);

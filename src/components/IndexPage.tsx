@@ -1,258 +1,339 @@
-import { useState, useEffect } from 'react';
-import { User, GraduationCap, QrCode, LogOut, Puzzle, Trophy, Clock, Target } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { UserSession } from '../types';
 import QRScanner from './QRScanner';
-import { validateQRCode, getNextStep, calculateTotalTime, ScannedPiece } from '../utils/qrValidator';
+import QuantumBackground from './QuantumBackground';
+import Footer from './Footer';
 
-interface Student {
-  id: string;
-  name: string;
-  year: string;
-  responsible?: string;
-  startTime: string;
-  endTime?: string;
-  totalTime?: string;
-  completed?: boolean;
-  scannedPieces?: ScannedPiece[];
+interface PuzzlePiece {
+  id: number;
+  turma: string;
+  grupo: string;
+  collected: boolean;
+  tema: string;
 }
 
 const IndexPage = () => {
-  const [currentStudent, setCurrentStudent] = useState<Student | null>(null);
+  const navigate = useNavigate();
+  const [session, setSession] = useState<UserSession | null>(null);
   const [showScanner, setShowScanner] = useState(false);
+  const [showMapModal, setShowMapModal] = useState(false);
+  const [puzzlePieces, setPuzzlePieces] = useState<PuzzlePiece[]>([]);
+  const [collectedCount, setCollectedCount] = useState(0);
+
+  // Definir todas as 24 peças do quebra-cabeça na ordem correta
+  const allPieces: PuzzlePiece[] = [
+    // Salas 1-9
+    { id: 1, turma: '9º', grupo: '1', collected: false, tema: 'Introdução à Ciência Quântica' },
+    { id: 2, turma: '9º', grupo: '2', collected: false, tema: 'Introdução à Ciência Quântica' },
+    { id: 3, turma: '2ª', grupo: '5', collected: false, tema: 'Escape Room Quântico' },
+    { id: 4, turma: '2ª', grupo: '6', collected: false, tema: 'Escape Room Quântico' },
+    { id: 5, turma: '1ª', grupo: '1', collected: false, tema: 'Escape Room Quântico' },
+    { id: 6, turma: '1ª', grupo: '2', collected: false, tema: 'Escape Room Quântico' },
+    { id: 7, turma: '1ª', grupo: '3', collected: false, tema: 'Escape Room Quântico' },
+    { id: 8, turma: '1ª', grupo: '4', collected: false, tema: 'Escape Room Quântico' },
+    { id: 9, turma: '1ª', grupo: '5', collected: false, tema: 'Escape Room Quântico' },
+    { id: 10, turma: '2ª', grupo: '1', collected: false, tema: 'Escape Room Quântico' },
+    { id: 11, turma: '2ª', grupo: '2', collected: false, tema: 'Escape Room Quântico' },
+    { id: 12, turma: '2ª', grupo: '3', collected: false, tema: 'Escape Room Quântico' },
+    { id: 13, turma: '9º', grupo: '3', collected: false, tema: 'Transição - relação com a IA' },
+    // Quadra
+    { id: 14, turma: '6º', grupo: '1', collected: false, tema: 'Aplicações da IA' },
+    { id: 15, turma: '6º', grupo: '2', collected: false, tema: 'Aplicações da IA' },
+    { id: 16, turma: '6º', grupo: '3', collected: false, tema: 'Aplicações da IA' },
+    { id: 17, turma: '6º', grupo: '4', collected: false, tema: 'Aplicações da IA' },
+    { id: 18, turma: '7º', grupo: '1', collected: false, tema: 'Aplicações da IA' },
+    { id: 19, turma: '7º', grupo: '2', collected: false, tema: 'Aplicações da IA' },
+    { id: 20, turma: '7º', grupo: '3', collected: false, tema: 'Aplicações da IA' },
+    { id: 21, turma: '8º', grupo: '1', collected: false, tema: 'Aplicações da IA' },
+    { id: 22, turma: '8º', grupo: '2', collected: false, tema: 'Aplicações da IA' },
+    { id: 23, turma: '8º', grupo: '3', collected: false, tema: 'Aplicações da IA' },
+    { id: 24, turma: '1ª', grupo: '6', collected: false, tema: 'Escape Room Quântico' },
+  ];
 
   useEffect(() => {
-    const studentData = localStorage.getItem('currentStudent');
-    if (studentData) {
-      setCurrentStudent(JSON.parse(studentData));
+    const sessionData = localStorage.getItem('currentSession');
+    if (sessionData) {
+      setSession(JSON.parse(sessionData));
+    }
+
+    // Carregar progresso do quebra-cabeça
+    const savedProgress = localStorage.getItem('puzzleProgress');
+    if (savedProgress) {
+      const progress = JSON.parse(savedProgress);
+      setPuzzlePieces(progress);
+      setCollectedCount(progress.filter((p: PuzzlePiece) => p.collected).length);
     } else {
-      // Se não houver aluno, volta para home
-      window.location.href = '/';
+      setPuzzlePieces(allPieces);
     }
   }, []);
 
-  const handleScanSuccess = (decodedText: string) => {
-    if (!currentStudent) return;
-
-    const scannedPieces = currentStudent.scannedPieces || [];
-    const validation = validateQRCode(decodedText, scannedPieces);
-
-    setShowScanner(false);
-
-    if (!validation.isValid) {
-      alert(validation.message);
-      if (validation.shouldNavigateHome) {
-        return;
+  const handleChangeStudent = () => {
+    // Modal customizado ao invés de alert
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4';
+    modal.innerHTML = `
+      <div class="bg-slate-800 rounded-lg p-6 max-w-md w-full border border-white/20 shadow-2xl">
+        <h3 class="text-xl font-bold text-white mb-4">Atenção!</h3>
+        <p class="text-white/80 mb-6">
+          Ao escolher outro aluno, todo o progresso do quebra-cabeça será perdido. Deseja continuar?
+        </p>
+        <div class="flex gap-3">
+          <button 
+            id="cancelBtn" 
+            class="flex-1 py-2 px-4 bg-white/10 hover:bg-white/20 rounded-lg text-white font-medium transition-colors"
+          >
+            Cancelar
+          </button>
+          <button 
+            id="confirmBtn" 
+            class="flex-1 py-2 px-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 rounded-lg text-white font-medium transition-all"
+          >
+            Confirmar
+          </button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    const confirmBtn = document.getElementById('confirmBtn');
+    const cancelBtn = document.getElementById('cancelBtn');
+    
+    confirmBtn?.addEventListener('click', () => {
+      localStorage.removeItem('currentSession');
+      localStorage.removeItem('puzzleProgress');
+      navigate('/');
+    });
+    
+    cancelBtn?.addEventListener('click', () => {
+      document.body.removeChild(modal);
+    });
+    
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        document.body.removeChild(modal);
       }
+    });
+  };
+
+  const getNextStep = () => {
+    if (collectedCount === 24) {
+      return 'Retirar brinde na mesa da entrada da quadra';
     }
-
-    // Tratar brinde final
-    if (validation.message === 'brinde') {
-      const endTime = new Date().toISOString();
-      const totalTime = calculateTotalTime(currentStudent.startTime, endTime);
-
-      const updatedStudent = {
-        ...currentStudent,
-        endTime,
-        totalTime,
-        completed: true
-      };
-
-      setCurrentStudent(updatedStudent);
-      localStorage.setItem('currentStudent', JSON.stringify(updatedStudent));
-
-      // Atualizar lista de alunos
-      const students = JSON.parse(localStorage.getItem('students') || '[]');
-      const updatedStudents = students.map((s: Student) =>
-        s.id === currentStudent.id ? updatedStudent : s
-      );
-      localStorage.setItem('students', JSON.stringify(updatedStudents));
-
-      alert(`🎉 Parabéns! Você completou a jornada UPverse!\n\nTempo total: ${totalTime}\n\nDirija-se ao ponto de retirada do brinde!`);
-      return;
-    }
-
-    // Adicionar nova peça
-    const location = validation.message;
-    const newPiece: ScannedPiece = {
-      id: scannedPieces.length + 1,
-      code: decodedText,
-      timestamp: new Date().toISOString(),
-      location: location === 'success' ? 'Quadra' : location
-    };
-
-    const updatedPieces = [...scannedPieces, newPiece];
-    const updatedStudent = { ...currentStudent, scannedPieces: updatedPieces };
-
-    setCurrentStudent(updatedStudent);
-    localStorage.setItem('currentStudent', JSON.stringify(updatedStudent));
-
-    // Atualizar lista de alunos
-    const students = JSON.parse(localStorage.getItem('students') || '[]');
-    const updatedStudents = students.map((s: Student) =>
-      s.id === currentStudent.id ? updatedStudent : s
-    );
-    localStorage.setItem('students', JSON.stringify(updatedStudents));
-
-    // Mensagem de sucesso
-    if (updatedPieces.length === 24) {
-      alert('🎊 Parabéns! Você coletou todas as 24 peças!\n\nAgora dirija-se ao ponto de retirada do brinde e escaneie o QR Code "brinde final".');
+    
+    // Determinar próxima etapa baseado no progresso
+    if (collectedCount < 4) {
+      return 'Introdução Quântica - Sala de Robótica';
+    } else if (collectedCount < 13) {
+      return 'Escape Room Quântico - 4 cômodos';
+    } else if (collectedCount < 14) {
+      return 'Transição Quântico-IA - Corredor';
     } else {
-      alert(`✅ Peça ${updatedPieces.length}/24 coletada!\n\nContinue para a próxima etapa.`);
+      return 'Aplicações de IA - Quadra';
     }
   };
 
-  const handleLogout = () => {
-    if (confirm('Tem certeza que deseja sair?')) {
-      localStorage.removeItem('currentStudent');
-      window.location.href = '/';
-    }
-  };
-
-  if (!currentStudent) {
+  if (!session) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-950 via-slate-900 to-blue-950">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
         <div className="text-white text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mx-auto mb-4"></div>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
           <p>Carregando...</p>
         </div>
       </div>
     );
   }
 
-  const scannedCount = currentStudent.scannedPieces?.length || 0;
-  const nextStep = getNextStep(scannedCount);
+  if (showScanner) {
+    return <QRScanner onClose={() => setShowScanner(false)} />;
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-950 via-slate-900 to-blue-950 px-4 py-8">
-      {/* QR Scanner Modal */}
-      {showScanner && (
-        <QRScanner
-          onScanSuccess={handleScanSuccess}
-          onClose={() => setShowScanner(false)}
-        />
-      )}
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-6 py-8 pb-24 relative overflow-hidden">
+      {/* Background Quântico Unificado */}
+      <QuantumBackground />
 
-      {/* Main Content */}
-      <div className="max-w-md mx-auto">
-        {/* Student Info Card */}
-        <div className="bg-white rounded-2xl shadow-xl p-8 mb-6 border-2 border-blue-900">
-          <div className="text-center mb-6">
-            <div className="inline-block p-3 bg-gradient-to-br from-blue-900 to-blue-700 rounded-full mb-4">
-              <User className="w-12 h-12 text-white" />
-            </div>
-            <h2 className="text-3xl font-bold text-blue-900 mb-2">
-              Olá, {currentStudent.name}!
-            </h2>
-            <div className="flex items-center justify-center gap-2 text-gray-600 mb-2">
-              <GraduationCap className="w-5 h-5" />
-              <p className="text-lg">{currentStudent.year}</p>
-            </div>
-            {currentStudent.responsible && (
-              <p className="text-sm text-gray-500">
-                Responsável: {currentStudent.responsible}
-              </p>
-            )}
-          </div>
+      <div className="max-w-3xl mx-auto relative z-10">
+        {/* Logo */}
+        <div className="flex justify-center mb-6">
+          <img 
+            src="/logo-upverse.png" 
+            alt="UPverse Logo" 
+            className="w-32 h-32 object-contain"
+            style={{
+              filter: 'drop-shadow(0 0 15px rgba(59, 130, 246, 0.3))'
+            }}
+          />
+        </div>
 
-          {/* Progress Bar */}
-          <div className="mb-6">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-sm font-semibold text-blue-900">
-                Progresso da Jornada
-              </span>
-              <span className="text-sm font-bold text-blue-700">
-                {scannedCount}/24 peças
-              </span>
-            </div>
-            <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-blue-600 to-cyan-500 transition-all duration-500 ease-out rounded-full"
-                style={{ width: `${(scannedCount / 24) * 100}%` }}
-              />
-            </div>
-          </div>
+        {/* Título com UPverse e Quântico estilizado */}
+        <div className="text-center mb-8">
+          <h1 className="text-3xl md:text-4xl font-bold mb-2">
+            <span className="gradient-text">UPverse</span>
+          </h1>
+          <h2 className="text-lg md:text-xl text-white/90">
+            do <span className="font-quantum text-cyan-400">Quântico</span> à <span className="font-quantum text-purple-300">Inteligência Artificial</span>
+          </h2>
+        </div>
 
-          {/* Next Step or Completion */}
-          <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-4 mb-6 border border-blue-200">
-            {currentStudent.completed ? (
-              <div className="text-center">
-                <div className="flex items-center justify-center gap-2 text-green-600 mb-2">
-                  <Trophy className="w-6 h-6" />
-                  <h3 className="font-bold text-lg">Jornada Concluída!</h3>
-                </div>
-                <div className="flex items-center justify-center gap-2 text-blue-900">
-                  <Clock className="w-5 h-5" />
-                  <p className="text-xl font-bold">{currentStudent.totalTime}</p>
-                </div>
-                <p className="text-sm text-gray-600 mt-2">
-                  Parabéns por completar a UPverse! 🎉
-                </p>
+        {/* Card de informações do usuário */}
+        <div className="text-center mb-6 space-y-2">
+          <p className="text-lg text-white/70">Feira de Ciências 2025</p>
+          
+          {session.tipo === 'responsavel' ? (
+            <div>
+              <div className="inline-block px-4 py-1 bg-blue-500/20 border border-blue-500/50 rounded-full mb-2">
+                <span className="text-blue-300 font-medium text-sm">Responsável</span>
               </div>
-            ) : (
-              <>
-                <h3 className="font-bold text-blue-900 mb-2 flex items-center gap-2">
-                  <Target className="w-5 h-5" />
-                  Próxima Etapa
-                </h3>
-                {scannedCount === 24 ? (
-                  <div className="text-center">
-                    <p className="text-blue-800 font-semibold text-lg mb-1">
-                      🎊 Todas as peças coletadas!
-                    </p>
-                    <p className="text-blue-700 font-medium">
-                      Dirija-se ao ponto de retirada do brinde
-                    </p>
-                    <p className="text-sm text-gray-600 mt-1">
-                      Escaneie o QR Code "brinde final"
-                    </p>
-                  </div>
-                ) : nextStep ? (
-                  <div>
-                    <p className="text-blue-800 font-semibold text-lg">
-                      {nextStep.code}
-                    </p>
-                    <p className="text-blue-600 text-sm">
-                      📍 {nextStep.location}
-                    </p>
-                    {scannedCount >= 14 && (
-                      <p className="text-gray-600 text-xs mt-2">
-                        Faltam {24 - scannedCount} {24 - scannedCount === 1 ? 'peça' : 'peças'}
-                      </p>
-                    )}
-                  </div>
-                ) : null}
-              </>
-            )}
-          </div>
+              <h2 className="text-2xl font-bold text-white">{session.alunoNome}</h2>
+              <p className="text-lg text-cyan-400">{session.turma}</p>
+            </div>
+          ) : (
+            <div className="inline-block px-4 py-1 bg-purple-500/20 border border-purple-500/50 rounded-full">
+              <span className="text-purple-300 font-medium text-sm">Visitante</span>
+            </div>
+          )}
+        </div>
 
-          {/* Action Buttons */}
-          <div className="space-y-3">
-            <button
-              onClick={() => setShowScanner(true)}
-              disabled={currentStudent.completed}
-              className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-semibold py-4 px-6 rounded-xl shadow-lg transition-all duration-300 flex items-center justify-center gap-3 disabled:cursor-not-allowed"
-            >
-              <QrCode className="w-6 h-6" />
-              {currentStudent.completed ? 'Jornada Concluída' : 'Escanear QR Code'}
-            </button>
-
-            <button
-              onClick={() => {/* TODO: Ver quebra-cabeça */}}
-              className="w-full bg-white hover:bg-gray-50 text-blue-900 font-semibold py-3 px-6 rounded-xl border-2 border-blue-900 transition-all duration-300 flex items-center justify-center gap-2"
-            >
-              <Puzzle className="w-5 h-5" />
-              Ver Quebra-cabeça ({scannedCount}/24)
-            </button>
-
-            <button
-              onClick={handleLogout}
-              className="w-full bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-3 px-6 rounded-xl border border-red-200 transition-all duration-300 flex items-center justify-center gap-2"
-            >
-              <LogOut className="w-5 h-5" />
-              Sair
-            </button>
+        {/* Quebra-cabeça Principal (6x4) */}
+        <div className="glass-effect p-6 mb-6">
+          <div className="relative">
+            {/* Imagem de fundo do logo */}
+            <img 
+              src="/logo-upverse.png" 
+              alt="Puzzle Background" 
+              className="absolute inset-0 w-full h-full object-contain opacity-20 grayscale"
+            />
+            
+            {/* Grid 6x4 sobre a imagem */}
+            <div className="relative grid grid-cols-6 gap-1 aspect-[3/2]">
+              {puzzlePieces.slice(0, 24).map((piece) => (
+                <div
+                  key={piece.id}
+                  className={`
+                    border border-white/20 rounded-sm transition-all duration-300
+                    ${piece.collected 
+                      ? 'bg-transparent' 
+                      : 'bg-gray-800/80 backdrop-blur-sm'
+                    }
+                  `}
+                />
+              ))}
+            </div>
           </div>
         </div>
+
+        {/* Miniaturas das peças */}
+        <div className="glass-effect p-4 mb-6">
+          <div className="grid grid-cols-12 gap-1">
+            {puzzlePieces.map((piece) => (
+              <div
+                key={piece.id}
+                className={`
+                  aspect-square rounded-sm border transition-all duration-200
+                  ${piece.collected
+                    ? 'bg-cyan-500/30 border-cyan-400/50'
+                    : 'bg-gray-700/50 border-gray-600/50'
+                  }
+                  flex flex-col items-center justify-center
+                `}
+                title={`${piece.turma} ano - Grupo ${piece.grupo}`}
+              >
+                <span className="text-[8px] text-white/70 font-medium">{piece.turma}</span>
+                <span className="text-[8px] text-white/50">G{piece.grupo}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Contador de peças */}
+        <div className="text-center mb-6">
+          <p className="text-2xl font-bold text-white">
+            <span className="text-cyan-400">{collectedCount}</span>
+            <span className="text-white/50">/24</span>
+          </p>
+          <p className="text-white/70 text-sm">peças do quebra-cabeça digital</p>
+        </div>
+
+        {/* Próxima etapa */}
+        <div className="glass-effect p-4 mb-6">
+          <h3 className="text-sm font-semibold text-white/70 mb-2">Próxima etapa</h3>
+          <p className="text-white font-medium">{getNextStep()}</p>
+        </div>
+
+        {/* Botões de ação */}
+        <div className="space-y-3">
+        
+          {/* Botão Escanear QR */}
+          <button
+            onClick={() => setShowScanner(true)}
+            className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg text-white font-semibold text-lg transition-all duration-300 transform hover:scale-105 shadow-xl"
+          >
+            Escanear QR Code
+          </button>
+          
+          {/* Botão Mapa */}
+          <button
+            onClick={() => setShowMapModal(true)}
+            className="w-full py-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-400/30 rounded-lg text-emerald-200 font-medium transition-colors"
+          >
+            Ver mapa do colégio
+          </button>
+
+          {/* Link para PDF de Informações */}
+          <a
+            href="/informacoes-upverse-2025.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full py-3 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-400/30 rounded-lg text-blue-200 font-medium transition-colors flex items-center justify-center gap-2"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            PDF com informações da Upverse
+          </a>
+
+          {/* Botão Escolher Outro Aluno */}
+          <button
+            onClick={handleChangeStudent}
+            className="w-full py-3 bg-white/5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white/80 font-medium transition-colors border border-white/10"
+          >
+            Escolher outro aluno
+          </button>
+        </div>
       </div>
+
+      {/* Modal do Mapa */}
+      {showMapModal && (
+        <div 
+          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+          onClick={() => setShowMapModal(false)}
+        >
+          <div 
+            className="bg-slate-800 rounded-lg p-4 max-w-4xl w-full"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-bold text-white">Mapa do colégio</h3>
+              <button
+                onClick={() => setShowMapModal(false)}
+                className="text-white/70 hover:text-white text-2xl"
+              >
+                ×
+              </button>
+            </div>
+            <img 
+              src="/mapa-escola.png" 
+              alt="Mapa do Colégio" 
+              className="w-full h-auto rounded"
+            />
+          </div>
+        </div>
+      )}
+
+      {/* Footer Unificado */}
+      <Footer />
     </div>
   );
 };
