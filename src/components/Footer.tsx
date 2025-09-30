@@ -32,6 +32,16 @@ const Footer = () => {
           </a>
         </div>
       </div>
+
+      {/* Link Stats */}
+      <div className="text-center mb-6">
+        <a 
+          href="/stats" 
+          className="text-white/30 hover:text-white/50 transition-colors text-xs font-mono"
+        >
+          &lt;/&gt; stats
+        </a>
+      </div>
       
       {/* Linha 3: Logo + Colégio UP */}
       <div className="flex items-center justify-center gap-3 pt-2">
