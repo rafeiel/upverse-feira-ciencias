@@ -4,6 +4,7 @@ import { UserSession } from '../types';
 import QRScanner from './QRScanner';
 import QuantumBackground from './QuantumBackground';
 import Footer from './Footer';
+import { validateQRCode } from '../utils/qrValidator';
 
 interface PuzzlePiece {
   id: number;
@@ -11,6 +12,7 @@ interface PuzzlePiece {
   grupo: string;
   collected: boolean;
   tema: string;
+  qrCode: string;
 }
 
 const IndexPage = () => {
@@ -21,34 +23,31 @@ const IndexPage = () => {
   const [puzzlePieces, setPuzzlePieces] = useState<PuzzlePiece[]>([]);
   const [collectedCount, setCollectedCount] = useState(0);
 
-  // Definir todas as 24 peças do quebra-cabeça na ordem correta
   const allPieces: PuzzlePiece[] = [
-    // Salas 1-9
-    { id: 1, turma: '9º', grupo: '1', collected: false, tema: 'Introdução à Ciência Quântica' },
-    { id: 2, turma: '9º', grupo: '2', collected: false, tema: 'Introdução à Ciência Quântica' },
-    { id: 3, turma: '2ª', grupo: '5', collected: false, tema: 'Escape Room Quântico' },
-    { id: 4, turma: '2ª', grupo: '6', collected: false, tema: 'Escape Room Quântico' },
-    { id: 5, turma: '1ª', grupo: '1', collected: false, tema: 'Escape Room Quântico' },
-    { id: 6, turma: '1ª', grupo: '2', collected: false, tema: 'Escape Room Quântico' },
-    { id: 7, turma: '1ª', grupo: '3', collected: false, tema: 'Escape Room Quântico' },
-    { id: 8, turma: '1ª', grupo: '4', collected: false, tema: 'Escape Room Quântico' },
-    { id: 9, turma: '1ª', grupo: '5', collected: false, tema: 'Escape Room Quântico' },
-    { id: 10, turma: '2ª', grupo: '1', collected: false, tema: 'Escape Room Quântico' },
-    { id: 11, turma: '2ª', grupo: '2', collected: false, tema: 'Escape Room Quântico' },
-    { id: 12, turma: '2ª', grupo: '3', collected: false, tema: 'Escape Room Quântico' },
-    { id: 13, turma: '9º', grupo: '3', collected: false, tema: 'Transição - relação com a IA' },
-    // Quadra
-    { id: 14, turma: '6º', grupo: '1', collected: false, tema: 'Aplicações da IA' },
-    { id: 15, turma: '6º', grupo: '2', collected: false, tema: 'Aplicações da IA' },
-    { id: 16, turma: '6º', grupo: '3', collected: false, tema: 'Aplicações da IA' },
-    { id: 17, turma: '6º', grupo: '4', collected: false, tema: 'Aplicações da IA' },
-    { id: 18, turma: '7º', grupo: '1', collected: false, tema: 'Aplicações da IA' },
-    { id: 19, turma: '7º', grupo: '2', collected: false, tema: 'Aplicações da IA' },
-    { id: 20, turma: '7º', grupo: '3', collected: false, tema: 'Aplicações da IA' },
-    { id: 21, turma: '8º', grupo: '1', collected: false, tema: 'Aplicações da IA' },
-    { id: 22, turma: '8º', grupo: '2', collected: false, tema: 'Aplicações da IA' },
-    { id: 23, turma: '8º', grupo: '3', collected: false, tema: 'Aplicações da IA' },
-    { id: 24, turma: '1ª', grupo: '6', collected: false, tema: 'Escape Room Quântico' },
+    { id: 1, turma: '9º', grupo: '1', collected: false, tema: 'Introdução à Ciência Quântica', qrCode: '9º ano grupo 1' },
+    { id: 2, turma: '9º', grupo: '2', collected: false, tema: 'Introdução à Ciência Quântica', qrCode: '9º ano grupo 2' },
+    { id: 3, turma: '2ª', grupo: '5', collected: false, tema: 'Escape Room Quântico', qrCode: '2ª série grupo 5' },
+    { id: 4, turma: '2ª', grupo: '6', collected: false, tema: 'Escape Room Quântico', qrCode: '2ª série grupo 6' },
+    { id: 5, turma: '1ª', grupo: '1', collected: false, tema: 'Escape Room Quântico', qrCode: '1ª série grupo 1' },
+    { id: 6, turma: '1ª', grupo: '2', collected: false, tema: 'Escape Room Quântico', qrCode: '1ª série grupo 2' },
+    { id: 7, turma: '1ª', grupo: '3', collected: false, tema: 'Escape Room Quântico', qrCode: '1ª série grupo 3' },
+    { id: 8, turma: '1ª', grupo: '4', collected: false, tema: 'Escape Room Quântico', qrCode: '1ª série grupo 4' },
+    { id: 9, turma: '1ª', grupo: '5', collected: false, tema: 'Escape Room Quântico', qrCode: '1ª série grupo 5' },
+    { id: 10, turma: '1ª', grupo: '6', collected: false, tema: 'Escape Room Quântico', qrCode: '1ª série grupo 6' },
+    { id: 11, turma: '2ª', grupo: '1', collected: false, tema: 'Escape Room Quântico', qrCode: '2ª série grupo 1' },
+    { id: 12, turma: '2ª', grupo: '2', collected: false, tema: 'Escape Room Quântico', qrCode: '2ª série grupo 2' },
+    { id: 13, turma: '2ª', grupo: '3', collected: false, tema: 'Escape Room Quântico', qrCode: '2ª série grupo 3' },
+    { id: 14, turma: '9º', grupo: '3', collected: false, tema: 'Transição - relação com a IA', qrCode: '9º ano grupo 3' },
+    { id: 15, turma: '6º', grupo: '1', collected: false, tema: 'Aplicações da IA', qrCode: '6º ano grupo 1' },
+    { id: 16, turma: '6º', grupo: '2', collected: false, tema: 'Aplicações da IA', qrCode: '6º ano grupo 2' },
+    { id: 17, turma: '6º', grupo: '3', collected: false, tema: 'Aplicações da IA', qrCode: '6º ano grupo 3' },
+    { id: 18, turma: '6º', grupo: '4', collected: false, tema: 'Aplicações da IA', qrCode: '6º ano grupo 4' },
+    { id: 19, turma: '7º', grupo: '1', collected: false, tema: 'Aplicações da IA', qrCode: '7º ano grupo 1' },
+    { id: 20, turma: '7º', grupo: '2', collected: false, tema: 'Aplicações da IA', qrCode: '7º ano grupo 2' },
+    { id: 21, turma: '7º', grupo: '3', collected: false, tema: 'Aplicações da IA', qrCode: '7º ano grupo 3' },
+    { id: 22, turma: '8º', grupo: '1', collected: false, tema: 'Aplicações da IA', qrCode: '8º ano grupo 1' },
+    { id: 23, turma: '8º', grupo: '2', collected: false, tema: 'Aplicações da IA', qrCode: '8º ano grupo 2' },
+    { id: 24, turma: '8º', grupo: '3', collected: false, tema: 'Aplicações da IA', qrCode: '8º ano grupo 3' },
   ];
 
   useEffect(() => {
@@ -57,7 +56,6 @@ const IndexPage = () => {
       setSession(JSON.parse(sessionData));
     }
 
-    // Carregar progresso do quebra-cabeça
     const savedProgress = localStorage.getItem('puzzleProgress');
     if (savedProgress) {
       const progress = JSON.parse(savedProgress);
@@ -69,7 +67,6 @@ const IndexPage = () => {
   }, []);
 
   const handleChangeStudent = () => {
-    // Modal customizado ao invés de alert
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4';
     modal.innerHTML = `
@@ -117,32 +114,54 @@ const IndexPage = () => {
     });
   };
 
+  const handleScanSuccess = (decodedText: string) => {
+    console.log('QR Code escaneado:', decodedText);
+    setShowScanner(false);
+    
+    const validation = validateQRCode(decodedText, collectedCount);
+    
+    if (!validation.isValid) {
+      alert(validation.error);
+      return;
+    }
+    
+    const alreadyCollected = puzzlePieces.find(p => p.qrCode === decodedText && p.collected);
+    if (alreadyCollected) {
+      alert('⚠️ Você já escaneou este QR Code! Siga para a próxima etapa.');
+      return;
+    }
+    
+    const updatedPieces = puzzlePieces.map(piece => 
+      piece.qrCode === decodedText 
+        ? { ...piece, collected: true }
+        : piece
+    );
+    
+    setPuzzlePieces(updatedPieces);
+    const newCollectedCount = updatedPieces.filter(p => p.collected).length;
+    setCollectedCount(newCollectedCount);
+    
+    localStorage.setItem('puzzleProgress', JSON.stringify(updatedPieces));
+    
+    console.log(`✅ Peça coletada! Total: ${newCollectedCount}/24`);
+    
+    if (newCollectedCount === 24) {
+      alert('🎊 Parabéns! Você completou todas as 24 peças!\n\nDirija-se à mesa da entrada da quadra para retirar seu brinde!');
+    }
+  };
+
   const getNextStep = () => {
     if (collectedCount === 24) {
       return 'Retirar brinde na mesa da entrada da quadra';
     }
     
-    // Determinar próxima etapa baseado no progresso
-    if (collectedCount < 4) {
-      return 'Introdução Quântica - Sala de Robótica';
-    } else if (collectedCount < 13) {
-      return 'Escape Room Quântico - 4 cômodos';
+    if (collectedCount < 2) {
+      return 'Introdução Quântica - Sala de Robótica (Grupo 1 e 2)';
     } else if (collectedCount < 14) {
-      return 'Transição Quântico-IA - Corredor';
+      return 'Escape Room Quântico - 4 cômodos';
     } else {
-      return 'Aplicações de IA - Quadra';
+      return 'Aplicações de IA - Quadra (qualquer ordem)';
     }
-  };
-
-  const handleScanSuccess = (decodedText: string) => {
-    // Fecha o scanner
-    setShowScanner(false);
-    
-    // Processa o QR code (por enquanto apenas mostra)
-    console.log('QR Code escaneado:', decodedText);
-    
-    // TODO: Adicionar lógica de validação e coleta de peça
-    alert(`✅ QR Code escaneado com sucesso!\n\n${decodedText}`);
   };
 
   if (!session) {
@@ -156,17 +175,18 @@ const IndexPage = () => {
     );
   }
 
-  if (showScanner) {
-    return <QRScanner onClose={() => setShowScanner(false)} onScanSuccess={handleScanSuccess} />;
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 px-6 py-8 pb-24 relative overflow-hidden">
-      {/* Background Quântico Unificado */}
       <QuantumBackground />
 
+      {showScanner && (
+        <QRScanner 
+          onClose={() => setShowScanner(false)} 
+          onScanSuccess={handleScanSuccess} 
+        />
+      )}
+
       <div className="max-w-3xl mx-auto relative z-10">
-        {/* Logo */}
         <div className="flex justify-center mb-6">
           <img 
             src="/logo-upverse.png" 
@@ -178,7 +198,6 @@ const IndexPage = () => {
           />
         </div>
 
-        {/* Título com UPverse e Quântico estilizado */}
         <div className="text-center mb-8">
           <h1 className="text-3xl md:text-4xl font-bold mb-2">
             <span className="gradient-text">UPverse</span>
@@ -188,7 +207,6 @@ const IndexPage = () => {
           </h2>
         </div>
 
-        {/* Card de informações do usuário */}
         <div className="text-center mb-6 space-y-2">
           <p className="text-lg text-white/70">Feira de Ciências 2025</p>
           
@@ -207,17 +225,14 @@ const IndexPage = () => {
           )}
         </div>
 
-        {/* Quebra-cabeça Principal (6x4) */}
         <div className="glass-effect p-6 mb-6">
           <div className="relative">
-            {/* Imagem de fundo do logo */}
             <img 
               src="/logo-upverse.png" 
               alt="Puzzle Background" 
               className="absolute inset-0 w-full h-full object-contain opacity-20 grayscale"
             />
             
-            {/* Grid 6x4 sobre a imagem */}
             <div className="relative grid grid-cols-6 gap-1 aspect-[3/2]">
               {puzzlePieces.slice(0, 24).map((piece) => (
                 <div
@@ -235,7 +250,6 @@ const IndexPage = () => {
           </div>
         </div>
 
-        {/* Miniaturas das peças */}
         <div className="glass-effect p-4 mb-6">
           <div className="grid grid-cols-12 gap-1">
             {puzzlePieces.map((piece) => (
@@ -258,7 +272,6 @@ const IndexPage = () => {
           </div>
         </div>
 
-        {/* Contador de peças */}
         <div className="text-center mb-6">
           <p className="text-2xl font-bold text-white">
             <span className="text-cyan-400">{collectedCount}</span>
@@ -267,15 +280,27 @@ const IndexPage = () => {
           <p className="text-white/70 text-sm">peças do quebra-cabeça digital</p>
         </div>
 
-        {/* Próxima etapa */}
         <div className="glass-effect p-4 mb-6">
           <h3 className="text-sm font-semibold text-white/70 mb-2">Próxima etapa</h3>
           <p className="text-white font-medium">{getNextStep()}</p>
         </div>
 
-        {/* Botões de ação */}
         <div className="space-y-3">
-          {/* Link para PDF de Informações */}
+        
+          <button
+            onClick={() => setShowScanner(true)}
+            className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg text-white font-semibold text-lg transition-all duration-300 transform hover:scale-105 shadow-xl"
+          >
+            Escanear QR Code
+          </button>
+          
+          <button
+            onClick={() => setShowMapModal(true)}
+            className="w-full py-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-400/30 rounded-lg text-emerald-200 font-medium transition-colors"
+          >
+            Ver mapa do colégio
+          </button>
+
           <a
             href="/informacoes-upverse-2025.pdf"
             target="_blank"
@@ -288,23 +313,6 @@ const IndexPage = () => {
             Ver informações da feira
           </a>
 
-          {/* Botão Mapa */}
-          <button
-            onClick={() => setShowMapModal(true)}
-            className="w-full py-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-400/30 rounded-lg text-emerald-200 font-medium transition-colors"
-          >
-            Ver mapa do colégio
-          </button>
-
-          {/* Botão Escanear QR */}
-          <button
-            onClick={() => setShowScanner(true)}
-            className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg text-white font-semibold text-lg transition-all duration-300 transform hover:scale-105 shadow-xl"
-          >
-            Escanear QR Code
-          </button>
-
-          {/* Botão Escolher Outro Aluno */}
           <button
             onClick={handleChangeStudent}
             className="w-full py-3 bg-white/5 hover:bg-white/10 rounded-lg text-white/60 hover:text-white/80 font-medium transition-colors border border-white/10"
@@ -314,7 +322,6 @@ const IndexPage = () => {
         </div>
       </div>
 
-      {/* Modal do Mapa */}
       {showMapModal && (
         <div 
           className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
@@ -342,7 +349,6 @@ const IndexPage = () => {
         </div>
       )}
 
-      {/* Footer Unificado */}
       <Footer />
     </div>
   );
