@@ -3,9 +3,10 @@ import { Html5Qrcode } from 'html5-qrcode';
 
 interface QRScannerProps {
   onClose: () => void;
+  onScanSuccess: (decodedText: string) => void;
 }
 
-const QRScanner = ({ onClose }: QRScannerProps) => {
+const QRScanner = ({ onClose, onScanSuccess }: QRScannerProps) => {
   const [scanning, setScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
@@ -54,8 +55,9 @@ const QRScanner = ({ onClose }: QRScannerProps) => {
   const handleScanSuccess = (decodedText: string) => {
     if (scannerRef.current) {
       scannerRef.current.stop().then(() => {
-        alert(`QR Code escaneado: ${decodedText}`);
-        onClose();
+        scannerRef.current?.clear();
+        // Passa o resultado para o componente pai processar
+        onScanSuccess(decodedText);
       });
     }
   };

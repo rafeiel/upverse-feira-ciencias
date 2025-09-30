@@ -134,6 +134,17 @@ const IndexPage = () => {
     }
   };
 
+  const handleScanSuccess = (decodedText: string) => {
+    // Fecha o scanner
+    setShowScanner(false);
+    
+    // Processa o QR code (por enquanto apenas mostra)
+    console.log('QR Code escaneado:', decodedText);
+    
+    // TODO: Adicionar lógica de validação e coleta de peça
+    alert(`✅ QR Code escaneado com sucesso!\n\n${decodedText}`);
+  };
+
   if (!session) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
@@ -146,7 +157,7 @@ const IndexPage = () => {
   }
 
   if (showScanner) {
-    return <QRScanner onClose={() => setShowScanner(false)} />;
+    return <QRScanner onClose={() => setShowScanner(false)} onScanSuccess={handleScanSuccess} />;
   }
 
   return (
@@ -264,23 +275,6 @@ const IndexPage = () => {
 
         {/* Botões de ação */}
         <div className="space-y-3">
-        
-          {/* Botão Escanear QR */}
-          <button
-            onClick={() => setShowScanner(true)}
-            className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg text-white font-semibold text-lg transition-all duration-300 transform hover:scale-105 shadow-xl"
-          >
-            Escanear QR Code
-          </button>
-          
-          {/* Botão Mapa */}
-          <button
-            onClick={() => setShowMapModal(true)}
-            className="w-full py-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-400/30 rounded-lg text-emerald-200 font-medium transition-colors"
-          >
-            Ver mapa do colégio
-          </button>
-
           {/* Link para PDF de Informações */}
           <a
             href="/informacoes-upverse-2025.pdf"
@@ -291,8 +285,24 @@ const IndexPage = () => {
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            PDF com informações da Upverse
+            Ver informações da feira
           </a>
+
+          {/* Botão Mapa */}
+          <button
+            onClick={() => setShowMapModal(true)}
+            className="w-full py-3 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-400/30 rounded-lg text-emerald-200 font-medium transition-colors"
+          >
+            Ver mapa do colégio
+          </button>
+
+          {/* Botão Escanear QR */}
+          <button
+            onClick={() => setShowScanner(true)}
+            className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg text-white font-semibold text-lg transition-all duration-300 transform hover:scale-105 shadow-xl"
+          >
+            Escanear QR Code
+          </button>
 
           {/* Botão Escolher Outro Aluno */}
           <button
