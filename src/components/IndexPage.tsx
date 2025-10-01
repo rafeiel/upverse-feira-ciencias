@@ -114,41 +114,102 @@ const IndexPage = () => {
     });
   };
 
+  const showErrorModal = (message: string) => {
+  const modal = document.createElement('div');
+  modal.className = 'fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4';
+  modal.innerHTML = `
+    <div class="bg-slate-800 rounded-lg p-6 max-w-md w-full border border-white/20 shadow-2xl">
+      <h3 class="text-xl font-bold text-white mb-4">Atenção!</h3>
+      <p class="text-white/80 mb-6 whitespace-pre-line">
+        ${message}
+      </p>
+      <button 
+        id="okBtn" 
+        class="w-full py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 rounded-lg text-white font-medium transition-all"
+      >
+        Entendi
+      </button>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  const okBtn = document.getElementById('okBtn');
+  okBtn?.addEventListener('click', () => {
+    document.body.removeChild(modal);
+  });
+  
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      document.body.removeChild(modal);
+    }
+  });
+};
+
   const handleScanSuccess = (decodedText: string) => {
-    console.log('QR Code escaneado:', decodedText);
-    setShowScanner(false);
+  console.log('QR Code escaneado:', decodedText);
+  setShowScanner(false);
+  
+  const validation = validateQRCode(decodedText, collectedCount);
+  
+  if (!validation.isValid) {
+    showErrorModal(validation.error!);
+    return;
+  }
+  
+  const alreadyCollected = puzzlePieces.find(p => p.qrCode === decodedText && p.collected);
+  if (alreadyCollected) {
+    showErrorModal('Você já escaneou este QR Code!\n\nSiga para a próxima etapa.');
+    return;
+  }
+  
+  const updatedPieces = puzzlePieces.map(piece => 
+    piece.qrCode === decodedText 
+      ? { ...piece, collected: true }
+      : piece
+  );
+  
+  setPuzzlePieces(updatedPieces);
+  const newCollectedCount = updatedPieces.filter(p => p.collected).length;
+  setCollectedCount(newCollectedCount);
+  
+  localStorage.setItem('puzzleProgress', JSON.stringify(updatedPieces));
+  
+  console.log(`✅ Peça coletada! Total: ${newCollectedCount}/24`);
+  
+  // Modal especial apenas quando completar tudo
+  if (newCollectedCount === 24) {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4';
+    modal.innerHTML = `
+      <div class="bg-slate-800 rounded-lg p-6 max-w-md w-full border border-white/20 shadow-2xl">
+        <h3 class="text-2xl font-bold text-white mb-4 text-center">🎊 Parabéns! 🎊</h3>
+        <p class="text-white/80 mb-6 text-center">
+          Você completou todas as 24 peças do quebra-cabeça!<br/><br/>
+          Dirija-se à mesa da entrada da quadra para retirar seu brinde!
+        </p>
+        <button 
+          id="congratsBtn" 
+          class="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 rounded-lg text-white font-semibold transition-all"
+        >
+          Retirar Brinde
+        </button>
+      </div>
+    `;
     
-    const validation = validateQRCode(decodedText, collectedCount);
+    document.body.appendChild(modal);
     
-    if (!validation.isValid) {
-      alert(validation.error);
-      return;
-    }
+    const congratsBtn = document.getElementById('congratsBtn');
+    congratsBtn?.addEventListener('click', () => {
+      document.body.removeChild(modal);
+    });
     
-    const alreadyCollected = puzzlePieces.find(p => p.qrCode === decodedText && p.collected);
-    if (alreadyCollected) {
-      alert('⚠️ Você já escaneou este QR Code! Siga para a próxima etapa.');
-      return;
-    }
-    
-    const updatedPieces = puzzlePieces.map(piece => 
-      piece.qrCode === decodedText 
-        ? { ...piece, collected: true }
-        : piece
-    );
-    
-    setPuzzlePieces(updatedPieces);
-    const newCollectedCount = updatedPieces.filter(p => p.collected).length;
-    setCollectedCount(newCollectedCount);
-    
-    localStorage.setItem('puzzleProgress', JSON.stringify(updatedPieces));
-    
-    console.log(`✅ Peça coletada! Total: ${newCollectedCount}/24`);
-    
-    if (newCollectedCount === 24) {
-      alert('🎊 Parabéns! Você completou todas as 24 peças!\n\nDirija-se à mesa da entrada da quadra para retirar seu brinde!');
-    }
-  };
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) {
+        document.body.removeChild(modal);
+      }
+    });
+  }
+};
 
   const getNextStep = () => {
     if (collectedCount === 24) {
