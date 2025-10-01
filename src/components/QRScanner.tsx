@@ -41,26 +41,30 @@ const QRScanner = ({ onClose, onScanSuccess }: QRScannerProps) => {
     startScanner();
 
     return () => {
-      if (scannerRef.current) {
+      if (scannerRef.current && scannerRef.current.isScanning) {
         scannerRef.current
           .stop()
           .then(() => {
             scannerRef.current?.clear();
           })
-          .catch((err) => console.error("Erro ao parar scanner:", err));
+          .catch((err) => console.error("Erro no cleanup:", err));
       }
     };
   }, []);
 
   const handleScanSuccess = (decodedText: string) => {
-    if (scannerRef.current) {
-      scannerRef.current.stop().then(() => {
-        scannerRef.current?.clear();
-        // Passa o resultado para o componente pai processar
-        onScanSuccess(decodedText);
-      });
-    }
-  };
+  if (scannerRef.current && scannerRef.current.isScanning) {
+    scannerRef.current.stop().then(() => {
+      scannerRef.current?.clear();
+      onScanSuccess(decodedText);
+    }).catch((err) => {
+      console.error("Erro ao parar scanner:", err);
+      onScanSuccess(decodedText);
+    });
+  } else {
+    onScanSuccess(decodedText);
+  }
+};
 
   return (
     <div 
