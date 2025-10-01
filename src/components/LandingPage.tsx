@@ -3,9 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { collection, query, where, getDocs, addDoc, updateDoc, doc, Timestamp, getDoc } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { Turma, Aluno } from '../types';
-import { seedDatabase } from '../data/seedAlunos';
 import QuantumBackground from './QuantumBackground';
 import Footer from './Footer';
+import { importarAlunos } from '../utils/importCSV';
+
+// Expor função globalmente (apenas em desenvolvimento)
+if (import.meta.env.DEV) {
+  (window as any).importarAlunos = importarAlunos;
+}
 
 const LandingPage = () => {
   const navigate = useNavigate();
@@ -20,11 +25,6 @@ const LandingPage = () => {
 
   const turmas: Turma[] = ['6º ano', '7º ano', '8º ano', '9º ano', '1ª série', '2ª série'];
 
-  // Popular banco de dados na primeira vez
-  useEffect(() => {
-    seedDatabase();
-  }, []);
-
   // Buscar alunos quando turma é selecionada
   useEffect(() => {
     if (selectedTurma && searchText.length >= 2) {
@@ -36,36 +36,33 @@ const LandingPage = () => {
   }, [selectedTurma, searchText]);
 
   const fetchAlunos = async () => {
-  if (!selectedTurma) return;
-  
-  try {
-    //console.log('🔍 Buscando alunos da turma:', selectedTurma);
-    const alunosRef = collection(db, 'alunos');
-    const q = query(alunosRef, where('turma', '==', selectedTurma));
-    const snapshot = await getDocs(q);
+    if (!selectedTurma) return;
     
-    console.log('📦 Documentos encontrados:', snapshot.size);
-    
-    const alunos = snapshot.docs.map(doc => {
-      const data = doc.data();
-      //console.log('👤 Aluno:', data);
-      return {
-        id: doc.id,
-        ...data
-      };
-    }) as Aluno[];
-    
-    const filtered = alunos.filter(aluno => 
-      aluno.nome.toLowerCase().includes(searchText.toLowerCase())
-    );
-    
-    //console.log('✅ Alunos filtrados:', filtered.length);
-    setFilteredAlunos(filtered);
-  } catch (error) {
-    console.error('❌ Erro ao buscar alunos:', error);
-    setError('Erro ao buscar alunos. Verifique a conexão com o Firebase.');
-  }
-};
+    try {
+      const alunosRef = collection(db, 'alunos');
+      const q = query(alunosRef, where('turma', '==', selectedTurma));
+      const snapshot = await getDocs(q);
+      
+      console.log('📦 Documentos encontrados:', snapshot.size);
+      
+      const alunos = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data
+        };
+      }) as Aluno[];
+      
+      const filtered = alunos.filter(aluno => 
+        aluno.nome.toLowerCase().includes(searchText.toLowerCase())
+      );
+      
+      setFilteredAlunos(filtered);
+    } catch (error) {
+      console.error('❌ Erro ao buscar alunos:', error);
+      setError('Erro ao buscar alunos. Verifique a conexão com o Firebase.');
+    }
+  };
 
   const handleAlunoSelect = (aluno: Aluno) => {
     setSelectedAluno(aluno);
@@ -79,8 +76,6 @@ const LandingPage = () => {
     setError('');
 
     try {
-      const sessionId = `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
       if (userType === 'responsavel' && selectedAluno) {
         // Buscar dados atualizados do aluno
         const alunoRef = doc(db, 'alunos', selectedAluno.id);
@@ -94,51 +89,66 @@ const LandingPage = () => {
 
         const alunoData = alunoSnap.data() as Aluno;
         
-        // Verificar se já tem 2 responsáveis
-        if (alunoData.responsaveis && alunoData.responsaveis.length >= 2) {
-          setError(`O limite de 2 responsáveis para ${selectedAluno.nome} já foi atingido. Selecione "Visitante" para continuar.`);
+        // Inicializar campos se não existirem
+        const updates: any = {};
+
+        if (!alunoData.activeSessions && alunoData.activeSessions !== 0) {
+          updates.activeSessions = 0;
+        }
+
+        if (!alunoData.createdAt) {
+          updates.createdAt = Timestamp.now();
+        }
+
+        // Verificar limite de sessões ativas
+        const currentActiveSessions = alunoData.activeSessions || 0;
+        if (currentActiveSessions >= 2) {
+          setError(`O limite de 2 acompanhantes simultâneos para ${selectedAluno.nome} já foi atingido.`);
           setIsLoading(false);
           return;
         }
 
-        // Adicionar responsável ao aluno
-        const newResponsavel = {
-          timestamp: Timestamp.now(),
-          sessionId
-        };
+        // Incrementar contador
+        updates.activeSessions = currentActiveSessions + 1;
 
-        await updateDoc(alunoRef, {
-          responsaveis: [...(alunoData.responsaveis || []), newResponsavel]
-        });
+        // Aplicar atualizações no documento do aluno
+        await updateDoc(alunoRef, updates);
 
-        // Criar sessão do usuário
+        // Criar sessão do responsável
         const sessionData = {
-          tipo: 'responsavel' as const,
-          alunoId: selectedAluno.id,
-          alunoNome: selectedAluno.nome,
-          turma: selectedAluno.turma,
-          timestamp: Timestamp.now()
+          studentId: selectedAluno.id,
+          studentName: selectedAluno.nome,
+          studentTurma: selectedAluno.turma,
+          startTime: Timestamp.now(),
+          active: true,
+          piecesCollected: [],
+          completedAll: false
         };
 
         const sessionRef = await addDoc(collection(db, 'sessions'), sessionData);
         
         console.log('✅ Sessão de responsável criada:', sessionRef.id);
         
-        // Redirecionar para página de jornada
+        // Salvar no localStorage
         localStorage.setItem('currentSession', JSON.stringify({ 
-          id: sessionRef.id, 
-          tipo: 'responsavel',
-          alunoId: selectedAluno.id,
-          alunoNome: selectedAluno.nome,
-          turma: selectedAluno.turma,
+          id: sessionRef.id,
+          studentId: selectedAluno.id,
+          studentName: selectedAluno.nome,
+          studentTurma: selectedAluno.turma,
           timestamp: new Date()
         }));
+        
         navigate('/jornada');
       } else {
         // Visitante
         const sessionData = {
-          tipo: 'visitante' as const,
-          timestamp: Timestamp.now()
+          studentId: null,
+          studentName: null,
+          studentTurma: null,
+          startTime: Timestamp.now(),
+          active: true,
+          piecesCollected: [],
+          completedAll: false
         };
 
         const sessionRef = await addDoc(collection(db, 'sessions'), sessionData);
@@ -146,10 +156,13 @@ const LandingPage = () => {
         console.log('✅ Sessão de visitante criada:', sessionRef.id);
         
         localStorage.setItem('currentSession', JSON.stringify({ 
-          id: sessionRef.id, 
-          tipo: 'visitante',
+          id: sessionRef.id,
+          studentId: null,
+          studentName: null,
+          studentTurma: null,
           timestamp: new Date()
         }));
+        
         navigate('/jornada');
       }
     } catch (err) {
@@ -166,12 +179,9 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6 py-12 pb-24 relative overflow-hidden">
-      {/* Background Quântico Unificado */}
       <QuantumBackground />
       
-      {/* Conteúdo principal */}
       <div className="relative z-10 text-center space-y-8 max-w-4xl mx-auto w-full">
-        {/* Logo PNG/SVG */}
         <div className="flex justify-center mb-6">
           <img 
             src="/logo-upverse.png" 
@@ -183,7 +193,6 @@ const LandingPage = () => {
           />
         </div>
         
-        {/* Título principal */}
         <div className="space-y-4">
           <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight">
             <span className="gradient-text">UPverse</span>
@@ -196,7 +205,6 @@ const LandingPage = () => {
           </h2>
         </div>
         
-        {/* Subtítulo */}
         <div className="text-center space-y-2 mx-auto max-w-lg">
           <p className="text-lg md:text-xl text-white/80 leading-relaxed">
             Feira de Ciências
@@ -209,9 +217,7 @@ const LandingPage = () => {
           </p>
         </div>
         
-        {/* Formulário de seleção */}
         <div className="glass-effect px-6 py-8 mx-auto max-w-lg space-y-6">
-          {/* Radio buttons */}
           <div className="space-y-3">
             <p className="text-white/70 font-medium text-base mb-4">Selecione uma opção:</p>
             
@@ -253,7 +259,6 @@ const LandingPage = () => {
             </label>
           </div>
 
-          {/* Dropdown de turmas - aparece apenas para responsável */}
           {userType === 'responsavel' && (
             <div className="space-y-4 animate-fade-in">
               <select
@@ -273,7 +278,6 @@ const LandingPage = () => {
                 ))}
               </select>
 
-              {/* Campo de busca de aluno */}
               {selectedTurma && (
                 <div className="relative">
                   <input
@@ -291,7 +295,6 @@ const LandingPage = () => {
                     className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                   
-                  {/* Sugestões de alunos */}
                   {showSuggestions && filteredAlunos.length > 0 && (
                     <div className="absolute z-20 w-full mt-2 bg-gray-800 border border-white/20 rounded-lg shadow-xl max-h-48 overflow-y-auto">
                       {filteredAlunos.map(aluno => (
@@ -311,14 +314,12 @@ const LandingPage = () => {
             </div>
           )}
 
-          {/* Mensagem de erro */}
           {error && (
             <div className="bg-red-500/20 border border-red-500/50 rounded-lg p-4 text-red-200 text-sm">
               {error}
             </div>
           )}
 
-          {/* Botão Iniciar Jornada */}
           <button 
             onClick={handleIniciarJornada}
             disabled={!isButtonEnabled || isLoading}

@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { doc, updateDoc } from 'firebase/firestore';
+import { db } from '../config/firebase';
 import { UserSession } from '../types';
 import QRScanner from './QRScanner';
 import QuantumBackground from './QuantumBackground';
@@ -116,91 +118,26 @@ const IndexPage = () => {
   };
 
   const showErrorModal = (message: string) => {
-  const modal = document.createElement('div');
-  modal.className = 'fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4';
-  modal.innerHTML = `
-    <div class="bg-slate-800 rounded-lg p-6 max-w-md w-full border border-white/20 shadow-2xl">
-      <h3 class="text-xl font-bold text-white mb-4">Atenção!</h3>
-      <p class="text-white/80 mb-6 whitespace-pre-line">
-        ${message}
-      </p>
-      <button 
-        id="okBtn" 
-        class="w-full py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 rounded-lg text-white font-medium transition-all"
-      >
-        Entendi
-      </button>
-    </div>
-  `;
-  
-  document.body.appendChild(modal);
-  const okBtn = document.getElementById('okBtn');
-  okBtn?.addEventListener('click', () => {
-    document.body.removeChild(modal);
-  });
-  
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) {
-      document.body.removeChild(modal);
-    }
-  });
-};
-
-  const handleScanSuccess = (decodedText: string) => {
-  console.log('QR Code escaneado:', decodedText);
-  setShowScanner(false);
-  
-  const validation = validateQRCode(decodedText, collectedCount);
-  
-  if (!validation.isValid) {
-    showErrorModal(validation.error!);
-    return;
-  }
-  
-  const alreadyCollected = puzzlePieces.find(p => p.qrCode === decodedText && p.collected);
-  if (alreadyCollected) {
-    showErrorModal('Você já escaneou este QR Code!\n\nSiga para a próxima etapa.');
-    return;
-  }
-  
-  const updatedPieces = puzzlePieces.map(piece => 
-    piece.qrCode === decodedText 
-      ? { ...piece, collected: true }
-      : piece
-  );
-  
-  setPuzzlePieces(updatedPieces);
-  const newCollectedCount = updatedPieces.filter(p => p.collected).length;
-  setCollectedCount(newCollectedCount);
-  
-  localStorage.setItem('puzzleProgress', JSON.stringify(updatedPieces));
-  
-  console.log(`✅ Peça coletada! Total: ${newCollectedCount}/24`);
-  
-  // Modal especial apenas quando completar tudo
-  if (newCollectedCount === 24) {
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4';
     modal.innerHTML = `
       <div class="bg-slate-800 rounded-lg p-6 max-w-md w-full border border-white/20 shadow-2xl">
-        <h3 class="text-2xl font-bold text-white mb-4 text-center">🎊 Parabéns! 🎊</h3>
-        <p class="text-white/80 mb-6 text-center">
-          Você completou todas as 24 peças do quebra-cabeça!<br/><br/>
-          Dirija-se à mesa da entrada da quadra para retirar seu brinde!
+        <h3 class="text-xl font-bold text-white mb-4">Atenção!</h3>
+        <p class="text-white/80 mb-6 whitespace-pre-line">
+          ${message}
         </p>
         <button 
-          id="congratsBtn" 
-          class="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 rounded-lg text-white font-semibold transition-all"
+          id="okBtn" 
+          class="w-full py-3 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 rounded-lg text-white font-medium transition-all"
         >
-          Retirar Brinde
+          Entendi
         </button>
       </div>
     `;
     
     document.body.appendChild(modal);
-    
-    const congratsBtn = document.getElementById('congratsBtn');
-    congratsBtn?.addEventListener('click', () => {
+    const okBtn = document.getElementById('okBtn');
+    okBtn?.addEventListener('click', () => {
       document.body.removeChild(modal);
     });
     
@@ -209,8 +146,86 @@ const IndexPage = () => {
         document.body.removeChild(modal);
       }
     });
-  }
-};
+  };
+
+  const handleScanSuccess = async (decodedText: string) => {
+    console.log('QR Code escaneado:', decodedText);
+    setShowScanner(false);
+    
+    const validation = validateQRCode(decodedText, collectedCount);
+    
+    if (!validation.isValid) {
+      showErrorModal(validation.error!);
+      return;
+    }
+    
+    const alreadyCollected = puzzlePieces.find(p => p.qrCode === decodedText && p.collected);
+    if (alreadyCollected) {
+      showErrorModal('Você já escaneou este QR Code!\n\nSiga para a próxima etapa.');
+      return;
+    }
+    
+    const updatedPieces = puzzlePieces.map(piece => 
+      piece.qrCode === decodedText 
+        ? { ...piece, collected: true }
+        : piece
+    );
+    
+    setPuzzlePieces(updatedPieces);
+    const newCollectedCount = updatedPieces.filter(p => p.collected).length;
+    setCollectedCount(newCollectedCount);
+    
+    localStorage.setItem('puzzleProgress', JSON.stringify(updatedPieces));
+    
+    console.log(`✅ Peça coletada! Total: ${newCollectedCount}/24`);
+    
+    // Salvar progresso no Firebase
+    if (session?.id) {
+      try {
+        const sessionRef = doc(db, 'sessions', session.id);
+        await updateDoc(sessionRef, {
+          piecesCollected: updatedPieces.filter(p => p.collected).map(p => p.qrCode),
+          completedAll: newCollectedCount === 24
+        });
+      } catch (error) {
+        console.error('Erro ao salvar progresso no Firebase:', error);
+      }
+    }
+    
+    // Modal especial apenas quando completar tudo
+    if (newCollectedCount === 24) {
+      const modal = document.createElement('div');
+      modal.className = 'fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4';
+      modal.innerHTML = `
+        <div class="bg-slate-800 rounded-lg p-6 max-w-md w-full border border-white/20 shadow-2xl">
+          <h3 class="text-2xl font-bold text-white mb-4 text-center">🎊 Parabéns! 🎊</h3>
+          <p class="text-white/80 mb-6 text-center">
+            Você completou todas as 24 peças do quebra-cabeça!<br/><br/>
+            Dirija-se à mesa da entrada da quadra para retirar seu brinde!
+          </p>
+          <button 
+            id="congratsBtn" 
+            class="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 rounded-lg text-white font-semibold transition-all"
+          >
+            Retirar Brinde
+          </button>
+        </div>
+      `;
+      
+      document.body.appendChild(modal);
+      
+      const congratsBtn = document.getElementById('congratsBtn');
+      congratsBtn?.addEventListener('click', () => {
+        document.body.removeChild(modal);
+      });
+      
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          document.body.removeChild(modal);
+        }
+      });
+    }
+  };
 
   const getNextStep = () => {
     if (collectedCount === 24) {
@@ -272,13 +287,13 @@ const IndexPage = () => {
         <div className="text-center mb-6 space-y-2">
           <p className="text-lg text-white/70">Feira de Ciências 2025</p>
           
-          {session.tipo === 'responsavel' ? (
+          {session.studentId ? (
             <div>
               <div className="inline-block px-4 py-1 bg-blue-500/20 border border-blue-500/50 rounded-full mb-2">
                 <span className="text-blue-300 font-medium text-sm">Responsável</span>
               </div>
-              <h2 className="text-2xl font-bold text-white">{session.alunoNome}</h2>
-              <p className="text-lg text-cyan-400">{session.turma}</p>
+              <h2 className="text-2xl font-bold text-white">{session.studentName}</h2>
+              <p className="text-lg text-cyan-400">{session.studentTurma}</p>
             </div>
           ) : (
             <div className="inline-block px-4 py-1 bg-purple-500/20 border border-purple-500/50 rounded-full">
@@ -348,7 +363,6 @@ const IndexPage = () => {
         </div>
 
         <div className="space-y-3">
-        
           <button
             onClick={() => setShowScanner(true)}
             className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-lg text-white font-semibold text-lg transition-all duration-300 transform hover:scale-105 shadow-xl"
