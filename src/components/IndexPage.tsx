@@ -98,6 +98,7 @@ const IndexPage = () => {
     const cancelBtn = document.getElementById('cancelBtn');
     
     confirmBtn?.addEventListener('click', () => {
+      document.body.removeChild(modal);
       localStorage.removeItem('currentSession');
       localStorage.removeItem('puzzleProgress');
       navigate('/');

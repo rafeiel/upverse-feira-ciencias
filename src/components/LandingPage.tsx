@@ -36,37 +36,36 @@ const LandingPage = () => {
   }, [selectedTurma, searchText]);
 
   const fetchAlunos = async () => {
-    if (!selectedTurma) return;
+  if (!selectedTurma) return;
+  
+  try {
+    //console.log('🔍 Buscando alunos da turma:', selectedTurma);
+    const alunosRef = collection(db, 'alunos');
+    const q = query(alunosRef, where('turma', '==', selectedTurma));
+    const snapshot = await getDocs(q);
     
-    try {
-      console.log('🔍 Buscando alunos da turma:', selectedTurma);
-      const alunosRef = collection(db, 'alunos');
-      const q = query(alunosRef, where('turma', '==', selectedTurma));
-      const snapshot = await getDocs(q);
-      
-      console.log('📦 Documentos encontrados:', snapshot.size);
-      
-      const alunos = snapshot.docs.map(doc => {
-        const data = doc.data();
-        console.log('👤 Aluno:', data);
-        return {
-          id: doc.id,
-          ...data
-        };
-      }) as Aluno[];
-      
-      // Filtrar pelo texto digitado
-      const filtered = alunos.filter(aluno => 
-        aluno.nome.toLowerCase().includes(searchText.toLowerCase())
-      );
-      
-      console.log('✅ Alunos filtrados:', filtered.length);
-      setFilteredAlunos(filtered);
-    } catch (error) {
-      console.error('❌ Erro ao buscar alunos:', error);
-      setError('Erro ao buscar alunos. Verifique a conexão com o Firebase.');
-    }
-  };
+    console.log('📦 Documentos encontrados:', snapshot.size);
+    
+    const alunos = snapshot.docs.map(doc => {
+      const data = doc.data();
+      //console.log('👤 Aluno:', data);
+      return {
+        id: doc.id,
+        ...data
+      };
+    }) as Aluno[];
+    
+    const filtered = alunos.filter(aluno => 
+      aluno.nome.toLowerCase().includes(searchText.toLowerCase())
+    );
+    
+    //console.log('✅ Alunos filtrados:', filtered.length);
+    setFilteredAlunos(filtered);
+  } catch (error) {
+    console.error('❌ Erro ao buscar alunos:', error);
+    setError('Erro ao buscar alunos. Verifique a conexão com o Firebase.');
+  }
+};
 
   const handleAlunoSelect = (aluno: Aluno) => {
     setSelectedAluno(aluno);
@@ -258,6 +257,8 @@ const LandingPage = () => {
           {userType === 'responsavel' && (
             <div className="space-y-4 animate-fade-in">
               <select
+                id="turma-select"
+                name="turma"
                 value={selectedTurma}
                 onChange={(e) => {
                   setSelectedTurma(e.target.value as Turma);
@@ -276,6 +277,8 @@ const LandingPage = () => {
               {selectedTurma && (
                 <div className="relative">
                   <input
+                    id="aluno-search"
+                    name="aluno"
                     type="text"
                     value={searchText}
                     onChange={(e) => {

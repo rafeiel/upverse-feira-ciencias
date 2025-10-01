@@ -59,7 +59,7 @@ export const validateQRCode = (
   if (!foundCode) {
     return {
       isValid: false,
-      error: '⚠️ QR Code inválido! Escaneie apenas os códigos oficiais da UPverse.'
+      error: 'QR Code inválido! Escaneie apenas os códigos dos grupos da UPverse.'
     };
   }
 
