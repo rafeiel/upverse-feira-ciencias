@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc} from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { UserSession } from '../types';
 import QRScanner from './QRScanner';
 import QuantumBackground from './QuantumBackground';
 import Footer from './Footer';
 import { validateQRCode } from '../utils/qrValidator';
+
 
 interface PuzzlePiece {
   id: number;
@@ -68,54 +69,71 @@ const IndexPage = () => {
     }
   }, []);
 
-  const handleChangeStudent = () => {
-    const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4';
-    modal.innerHTML = `
-      <div class="bg-slate-800 rounded-lg p-6 max-w-md w-full border border-white/20 shadow-2xl">
-        <h3 class="text-xl font-bold text-white mb-4">Atenção!</h3>
-        <p class="text-white/80 mb-6">
-          Ao escolher outro aluno, todo o progresso do quebra-cabeça será perdido. Deseja continuar?
-        </p>
-        <div class="flex gap-3">
-          <button 
-            id="cancelBtn" 
-            class="flex-1 py-2 px-4 bg-white/10 hover:bg-white/20 rounded-lg text-white font-medium transition-colors"
-          >
-            Cancelar
-          </button>
-          <button 
-            id="confirmBtn" 
-            class="flex-1 py-2 px-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 rounded-lg text-white font-medium transition-all"
-          >
-            Confirmar
-          </button>
-        </div>
+ const handleChangeStudent = async () => {
+  const modal = document.createElement('div');
+  modal.className = 'fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4';
+  modal.innerHTML = `
+    <div class="bg-slate-800 rounded-lg p-6 max-w-md w-full border border-white/20 shadow-2xl">
+      <h3 class="text-xl font-bold text-white mb-4">Atenção!</h3>
+      <p class="text-white/80 mb-6">
+        Ao escolher outro aluno, todo o progresso do quebra-cabeça será perdido. Deseja continuar?
+      </p>
+      <div class="flex gap-3">
+        <button 
+          id="cancelBtn" 
+          class="flex-1 py-2 px-4 bg-white/10 hover:bg-white/20 rounded-lg text-white font-medium transition-colors"
+        >
+          Cancelar
+        </button>
+        <button 
+          id="confirmBtn" 
+          class="flex-1 py-2 px-4 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 rounded-lg text-white font-medium transition-all"
+        >
+          Confirmar
+        </button>
       </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    const confirmBtn = document.getElementById('confirmBtn');
-    const cancelBtn = document.getElementById('cancelBtn');
-    
-    confirmBtn?.addEventListener('click', () => {
-      document.body.removeChild(modal);
-      localStorage.removeItem('currentSession');
-      localStorage.removeItem('puzzleProgress');
-      navigate('/');
-    });
-    
-    cancelBtn?.addEventListener('click', () => {
-      document.body.removeChild(modal);
-    });
-    
-    modal.addEventListener('click', (e) => {
-      if (e.target === modal) {
-        document.body.removeChild(modal);
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  const confirmBtn = document.getElementById('confirmBtn');
+  const cancelBtn = document.getElementById('cancelBtn');
+  
+  confirmBtn?.addEventListener('click', async () => {
+    // Decrementar activeSessions se for responsável
+    if (session?.studentId) {
+      try {
+        const alunoRef = doc(db, 'alunos', session.studentId);
+        const alunoSnap = await getDoc(alunoRef);
+        
+        if (alunoSnap.exists()) {
+          const currentSessions = alunoSnap.data().activeSessions || 0;
+          await updateDoc(alunoRef, {
+            activeSessions: Math.max(0, currentSessions - 1)
+          });
+        }
+      } catch (err) {
+        console.error('Erro ao decrementar activeSessions:', err);
       }
-    });
-  };
+    }
+    
+    document.body.removeChild(modal);
+    localStorage.removeItem('currentSession');
+    localStorage.removeItem('puzzleProgress');
+    navigate('/');
+  });
+  
+  cancelBtn?.addEventListener('click', () => {
+    document.body.removeChild(modal);
+  });
+  
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      document.body.removeChild(modal);
+    }
+  });
+};
 
   const showErrorModal = (message: string) => {
     const modal = document.createElement('div');
@@ -158,6 +176,12 @@ const IndexPage = () => {
       showErrorModal(validation.error!);
       return;
     }
+
+    if (decodedText.toUpperCase() === 'BRINDE') {
+  showBrindeModal();
+  return;
+}
+
     
     const alreadyCollected = puzzlePieces.find(p => p.qrCode === decodedText && p.collected);
     if (alreadyCollected) {
@@ -227,71 +251,114 @@ const IndexPage = () => {
     }
   };
 
-  const getNextStep = () => {
-    const mainCircuitPieces = puzzlePieces.slice(0, 14); // Peças 1-14
-    const quadraPieces = puzzlePieces.slice(14, 24); // Peças 15-24
-    
-    const mainCircuitComplete = mainCircuitPieces.every(p => p.collected);
-    const quadraComplete = quadraPieces.every(p => p.collected);
-    
-    // Pode retirar brinde se completou qualquer um dos circuitos
-    if (mainCircuitComplete || quadraComplete) {
-      return 'Agora, você pode retirar seu brinde na porta do Laboratório de Química!';
+  const showBrindeModal = () => {
+  const modal = document.createElement('div');
+  modal.className = 'fixed inset-0 bg-black/95 flex items-center justify-center z-50 p-4';
+  modal.innerHTML = `
+    <div class="text-center space-y-8 max-w-2xl">
+      <img 
+        src="/logo-upverse.png" 
+        alt="UPverse Logo" 
+        class="w-64 h-64 mx-auto object-contain animate-pulse"
+        style="filter: drop-shadow(0 0 40px rgba(59, 130, 246, 0.8)) drop-shadow(0 0 80px rgba(147, 51, 234, 0.6))"
+      />
+      
+      <div class="space-y-4">
+        <h2 class="text-5xl font-bold text-white">
+          Parabéns!
+        </h2>
+        
+        <p class="text-2xl text-white/90">
+          Obrigado por participar do
+        </p>
+        
+        <h1 class="text-6xl font-bold gradient-text">
+          UPverse
+        </h1>
+        
+        <p class="text-xl text-cyan-400">
+          do Quântico à Inteligência Artificial
+        </p>
+        
+        <div class="pt-8">
+          <div class="inline-block px-8 py-4 bg-green-500/20 border-2 border-green-400 rounded-full">
+            <p class="text-3xl font-bold text-green-300">
+              ✓ BRINDE LIBERADO
+            </p>
+          </div>
+        </div>
+      </div>
+      
+      <button 
+        id="closeBrindeBtn" 
+        class="mt-8 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 rounded-full text-white text-xl font-semibold transition-all transform hover:scale-105"
+      >
+        Fechar
+      </button>
+    </div>
+  `;
+  
+  document.body.appendChild(modal);
+  
+  const closeBtn = document.getElementById('closeBrindeBtn');
+  closeBtn?.addEventListener('click', () => {
+    document.body.removeChild(modal);
+  });
+};
+
+const getNextStep = () => {
+  const mainCircuitPieces = puzzlePieces.slice(0, 14); // Peças 1-14
+  const quadraPieces = puzzlePieces.slice(14, 24); // Peças 15-24
+  
+  const mainCircuitComplete = mainCircuitPieces.every(p => p.collected);
+  const quadraComplete = quadraPieces.every(p => p.collected);
+  
+  // Completou TUDO (24 peças)
+  if (mainCircuitComplete && quadraComplete) {
+    return 'Você completou o circuito Upverse! Escaneie o QR Code "Brinde" ao lado do Laboratório de Química para retirar seu brinde.';
+  }
+  
+  // Completou circuito principal (14 peças) - direciona para quadra OU brinde
+  if (mainCircuitComplete && !quadraComplete) {
+    return 'Escape Room Quântico concluído! Agora você pode ir para a quadra completar os grupos do 6º, 7º e 8º ano OU Escaneie o QR Code "Brinde" ao lado do Laboratório de Química para retirar seu brinde.';
+  }
+  
+  // Completou quadra (10 peças) - direciona para circuito principal OU brinde
+  if (quadraComplete && !mainCircuitComplete) {
+    return 'Grupos do 6º, 7º e 8º ano - Completos! Agora você pode ir para Sala 1 (robótica) começar o circuito principal OU OU Escaneie o QR Code "Brinde" ao lado do Laboratório de Química para retirar seu brinde.';
+  }
+  
+  // Início - pode escolher qualquer rota
+  if (collectedCount === 0) {
+    return 'Siga para Sala 1 (robótica) - 9º ano e Ensino Médio OU Quadra - grupos do 6º, 7º e 8º ano';
+  }
+  
+  // Se começou pelo circuito principal
+  if (puzzlePieces[0].collected && collectedCount === 1) {
+    return 'Sala 1 (robótica) - 9º ano Grupo 2';
+  }
+  
+  // Escape Room (peças 3-13)
+  if (collectedCount >= 2 && collectedCount <= 13) {
+    switch (collectedCount) {
+      case 2: return 'Sala 2 - 2ª série Grupo 4 (Escape Room)';
+      case 3: return 'Sala 2 - 2ª série Grupo 5 (Escape Room)';
+      case 4: return 'Sala 3 - 1ª série Grupo 1 (Escape Room)';
+      case 5: return 'Sala 3 - 1ª série Grupo 2 (Escape Room)';
+      case 6: return 'Sala 4 - 1ª série Grupo 3 (Escape Room)';
+      case 7: return 'Sala 5 - 1ª série Grupo 4 (Escape Room)';
+      case 8: return 'Sala 5 - 1ª série Grupo 5 (Escape Room)';
+      case 9: return 'Sala 6 - 1ª série Grupo 6 (Escape Room)';
+      case 10: return 'Sala 7 - 2ª série Grupo 1 (Escape Room)';
+      case 11: return 'Sala 7 - 2ª série Grupo 2 (Escape Room)';
+      case 12: return 'Sala 8 - 2ª série Grupo 3 (Escape Room)';
+      case 13: return 'Sala 9 - 9º ano Grupo 3 (Transição Quântica → IA)';
     }
-    
-    // Início - pode escolher qualquer rota
-    if (collectedCount === 0) {
-      return 'Siga para Sala 1 (robótica) - 9º ano e Ensino Médio OU Quadra - grupos do 6º, 7º e 8º ano';
-    }
-    
-    // Se começou pelo circuito principal (tem peça do 9º ano grupo 1)
-    if (puzzlePieces[0].collected && collectedCount === 1) {
-      return 'Sala 1 (robótica) - 9º ano Grupo 2';
-    }
-    
-    // Continuação do Escape Room (peças 3-13) - instruções individuais por sala
-    if (collectedCount >= 2 && collectedCount <= 13) {
-      switch (collectedCount) {
-        case 2:
-          return 'Sala 2 - 2ª série Grupo 4 (Escape Room)';
-        case 3:
-          return 'Sala 2 - 2ª série Grupo 5 (Escape Room)';
-        case 4:
-          return 'Sala 3 - 1ª série Grupo 1 (Escape Room)';
-        case 5:
-          return 'Sala 3 - 1ª série Grupo 2 (Escape Room)';
-        case 6:
-          return 'Sala 4 - 1ª série Grupo 3 (Escape Room Quântico)';
-        case 7:
-          return 'Sala 5 - 1ª série Grupo 4 (Escape Room Quântico)';
-        case 8:
-          return 'Sala 5 - 1ª série Grupo 5 (Escape Room Quântico)';
-        case 9:
-          return 'Sala 6 - 1ª série Grupo 6 (Escape Room Quântico)';
-        case 10:
-          return 'Sala 7 - 2ª série Grupo 1 (Escape Room Quântico)';
-        case 11:
-          return 'Sala 7 - 2ª série Grupo 2 (Escape Room Quântico)';
-        case 12:
-          return 'Sala 8 - 2ª série Grupo 3 (Escape Room Quântico)';
-        case 13:
-          return 'Sala 9 - 9º ano Grupo 3 (Transição entre Ciência Quântica e IA)';
-      }
-    }
-    
-    // Se já completou circuito principal, direciona pra quadra
-    if (mainCircuitComplete && !quadraComplete) {
-      return 'Quadra - grupos do 6º, 7º e 8º ano (Aplicações da IA)';
-    }
-    
-    // Se já completou quadra, direciona pro circuito principal
-    if (quadraComplete && !mainCircuitComplete) {
-      return 'Continue o circuito principal na Sala 1 (robótica)';
-    }
-    
-    // Caso padrão - sempre pode ir pra quadra
-    return 'Quadra -  grupos do 6º, 7º e 8º ano OU continue o circuito principal';
-  };
+  }
+  
+  // Caso padrão
+  return 'Quadra - grupos do 6º, 7º e 8º ano OU continue o circuito principal';
+};
 
   if (!session) {
     return (

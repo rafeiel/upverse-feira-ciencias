@@ -6,6 +6,7 @@ interface PuzzlePiece {
   tema: string;
   qrCode: string;
 }
+
 export interface QRStep {
   code: string;
   location: string;
@@ -61,6 +62,24 @@ export const validateQRCode = (
   decodedText: string,
   puzzlePieces: PuzzlePiece[]
 ): ValidationResult => {
+  // Validação especial do BRINDE
+  if (decodedText.toUpperCase() === 'BRINDE') {
+    const mainComplete = puzzlePieces.slice(0, 14).every(p => p.collected);
+    const quadraComplete = puzzlePieces.slice(14, 24).every(p => p.collected);
+    
+    if (mainComplete || quadraComplete) {
+      return {
+        isValid: true,
+        pieceInfo: { code: 'BRINDE', location: 'Lab. Química', turma: 'Brinde', grupo: '0' }
+      };
+    } else {
+      return {
+        isValid: false,
+        error: 'Você ainda não completou nenhum circuito!\n\nSiga para Sala 1 (robótica) OU Quadra (6º/7º/8º ano)'
+      };
+    }
+  }
+
   // 1. Verificar se é um código válido
   const foundCode = allValidCodes.find(qr => qr.code === decodedText);
   
@@ -88,7 +107,7 @@ export const validateQRCode = (
     const expectedCode = qrSequenceRequired[mainCircuitCollected];
     return {
       isValid: false,
-      error: `Ordem incorreta no circuito principal!\nVocê deve ir para :\n"${expectedCode.code}" na ${expectedCode.location}`
+      error: `Ordem incorreta no circuito principal!\nVocê deve ir para:\n"${expectedCode.code}" na ${expectedCode.location}`
     };
   }
 
