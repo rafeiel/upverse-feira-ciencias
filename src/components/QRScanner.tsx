@@ -8,13 +8,14 @@ interface QRScannerProps {
 
 const QRScanner = ({ onClose, onScanSuccess }: QRScannerProps) => {
   const [scanning, setScanning] = useState(false);
-  const [lastScanned, setLastScanned] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const hasScannedRef = useRef(false);
 
   useEffect(() => {
     const startScanner = async () => {
       try {
+        hasScannedRef.current = false; // Reset ao abrir
         const scanner = new Html5Qrcode("qr-reader");
         scannerRef.current = scanner;
 
@@ -53,29 +54,28 @@ const QRScanner = ({ onClose, onScanSuccess }: QRScannerProps) => {
     };
   }, []);
 
-const handleScanSuccess = (decodedText: string) => {
-  if (decodedText === lastScanned) return;
-  setLastScanned(decodedText);
-  
-  // Prevenir múltiplos scans do mesmo código
-  if (!scanning) return;
-  
-  setScanning(false); // Bloquear imediatamente novos scans
-  
-  if (scannerRef.current && scannerRef.current.isScanning) {
-    scannerRef.current.stop()
-      .then(() => {
-        scannerRef.current?.clear();
-        onScanSuccess(decodedText);
-      })
-      .catch((err) => {
-        console.error("Erro ao parar scanner:", err);
-        onScanSuccess(decodedText); // Chama mesmo com erro
-      });
-  } else {
-    onScanSuccess(decodedText);
-  }
-};
+  const handleScanSuccess = (decodedText: string) => {
+    // Prevenir múltiplos scans usando ref (não reseta entre renders)
+    if (hasScannedRef.current) return;
+    if (!scanning) return;
+    
+    hasScannedRef.current = true;
+    setScanning(false);
+    
+    if (scannerRef.current && scannerRef.current.isScanning) {
+      scannerRef.current.stop()
+        .then(() => {
+          scannerRef.current?.clear();
+          onScanSuccess(decodedText);
+        })
+        .catch((err) => {
+          console.error("Erro ao parar scanner:", err);
+          onScanSuccess(decodedText);
+        });
+    } else {
+      onScanSuccess(decodedText);
+    }
+  };
 
   return (
     <div 
@@ -86,7 +86,6 @@ const handleScanSuccess = (decodedText: string) => {
         className="bg-slate-800 rounded-lg p-6 max-w-2xl w-full border border-white/20 shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-white">Escanear QR Code</h2>
           <button
@@ -97,7 +96,6 @@ const handleScanSuccess = (decodedText: string) => {
           </button>
         </div>
 
-        {/* Scanner Area */}
         <div className="glass-effect p-6">
           {error ? (
             <div className="bg-red-500/20 border border-red-500 rounded-lg p-6 text-center">
