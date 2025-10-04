@@ -88,7 +88,7 @@ export const validateQRCode = (
     const expectedCode = qrSequenceRequired[mainCircuitCollected];
     return {
       isValid: false,
-      error: `Ordem incorreta no circuito principal!\nVocê deve escanear:\n"${expectedCode.code}" na ${expectedCode.location}`
+      error: `Ordem incorreta no circuito principal!\nVocê deve ir para :\n"${expectedCode.code}" na ${expectedCode.location}`
     };
   }
 

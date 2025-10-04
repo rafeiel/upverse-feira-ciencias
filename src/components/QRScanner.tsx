@@ -8,6 +8,7 @@ interface QRScannerProps {
 
 const QRScanner = ({ onClose, onScanSuccess }: QRScannerProps) => {
   const [scanning, setScanning] = useState(false);
+  const [lastScanned, setLastScanned] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
 
@@ -52,15 +53,25 @@ const QRScanner = ({ onClose, onScanSuccess }: QRScannerProps) => {
     };
   }, []);
 
-  const handleScanSuccess = (decodedText: string) => {
+const handleScanSuccess = (decodedText: string) => {
+  if (decodedText === lastScanned) return;
+  setLastScanned(decodedText);
+  
+  // Prevenir múltiplos scans do mesmo código
+  if (!scanning) return;
+  
+  setScanning(false); // Bloquear imediatamente novos scans
+  
   if (scannerRef.current && scannerRef.current.isScanning) {
-    scannerRef.current.stop().then(() => {
-      scannerRef.current?.clear();
-      onScanSuccess(decodedText);
-    }).catch((err) => {
-      console.error("Erro ao parar scanner:", err);
-      onScanSuccess(decodedText);
-    });
+    scannerRef.current.stop()
+      .then(() => {
+        scannerRef.current?.clear();
+        onScanSuccess(decodedText);
+      })
+      .catch((err) => {
+        console.error("Erro ao parar scanner:", err);
+        onScanSuccess(decodedText); // Chama mesmo com erro
+      });
   } else {
     onScanSuccess(decodedText);
   }
