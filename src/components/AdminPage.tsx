@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, getDocs, deleteDoc, doc, updateDoc, query, } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, updateDoc, } from 'firebase/firestore';
 import { db } from '../config/firebase';
 import { importarAlunos } from '../utils/importCSV';
 import QuantumBackground from './QuantumBackground';
