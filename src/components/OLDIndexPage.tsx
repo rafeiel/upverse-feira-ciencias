@@ -152,7 +152,7 @@ const IndexPage = () => {
     console.log('QR Code escaneado:', decodedText);
     setShowScanner(false);
     
-    const validation = validateQRCode(decodedText, puzzlePieces);
+    const validation = validateQRCode(decodedText, collectedCount);
     
     if (!validation.isValid) {
       showErrorModal(validation.error!);
@@ -177,7 +177,7 @@ const IndexPage = () => {
     
     localStorage.setItem('puzzleProgress', JSON.stringify(updatedPieces));
     
-    console.log(`Peça coletada! Total: ${newCollectedCount}/24`);
+    console.log(`✅ Peça coletada! Total: ${newCollectedCount}/24`);
     
     // Salvar progresso no Firebase
     if (session?.id) {
@@ -228,69 +228,17 @@ const IndexPage = () => {
   };
 
   const getNextStep = () => {
-    const mainCircuitPieces = puzzlePieces.slice(0, 14); // Peças 1-14
-    const quadraPieces = puzzlePieces.slice(14, 24); // Peças 15-24
-    
-    const mainCircuitComplete = mainCircuitPieces.every(p => p.collected);
-    const quadraComplete = quadraPieces.every(p => p.collected);
-    
-    // Pode retirar brinde se completou qualquer um dos circuitos
-    if (mainCircuitComplete || quadraComplete) {
-      return 'Agora, você pode retirar seu brinde na porta do Laboratório de Química!';
+    if (collectedCount === 24) {
+      return 'Retirar brinde na mesa da entrada da quadra';
     }
     
-    // Início - pode escolher qualquer rota
-    if (collectedCount === 0) {
-      return 'Siga para Sala 1 (robótica) - 9º ano e Ensino Médio OU Quadra - grupos do 6º, 7º e 8º ano';
+    if (collectedCount < 2) {
+      return 'Introdução Quântica - Sala de Robótica (Grupo 1 e 2)';
+    } else if (collectedCount < 14) {
+      return 'Escape Room Quântico - salas 1 a 4';
+    } else {
+      return 'Aplicações de IA - Quadra (qualquer ordem)';
     }
-    
-    // Se começou pelo circuito principal (tem peça do 9º ano grupo 1)
-    if (puzzlePieces[0].collected && collectedCount === 1) {
-      return 'Sala 1 (robótica) - 9º ano Grupo 2';
-    }
-    
-    // Continuação do Escape Room (peças 3-13) - instruções individuais por sala
-    if (collectedCount >= 2 && collectedCount <= 13) {
-      switch (collectedCount) {
-        case 2:
-          return 'Sala 2 - 2ª série Grupo 4 (Escape Room)';
-        case 3:
-          return 'Sala 2 - 2ª série Grupo 5 (Escape Room)';
-        case 4:
-          return 'Sala 3 - 1ª série Grupo 1 (Escape Room)';
-        case 5:
-          return 'Sala 3 - 1ª série Grupo 2 (Escape Room)';
-        case 6:
-          return 'Sala 4 - 1ª série Grupo 3 (Escape Room Quântico)';
-        case 7:
-          return 'Sala 5 - 1ª série Grupo 4 (Escape Room Quântico)';
-        case 8:
-          return 'Sala 5 - 1ª série Grupo 5 (Escape Room Quântico)';
-        case 9:
-          return 'Sala 6 - 1ª série Grupo 6 (Escape Room Quântico)';
-        case 10:
-          return 'Sala 7 - 2ª série Grupo 1 (Escape Room Quântico)';
-        case 11:
-          return 'Sala 7 - 2ª série Grupo 2 (Escape Room Quântico)';
-        case 12:
-          return 'Sala 8 - 2ª série Grupo 3 (Escape Room Quântico)';
-        case 13:
-          return 'Sala 9 - 9º ano Grupo 3 (Transição entre Ciência Quântica e IA)';
-      }
-    }
-    
-    // Se já completou circuito principal, direciona pra quadra
-    if (mainCircuitComplete && !quadraComplete) {
-      return 'Quadra - grupos do 6º, 7º e 8º ano (Aplicações da IA)';
-    }
-    
-    // Se já completou quadra, direciona pro circuito principal
-    if (quadraComplete && !mainCircuitComplete) {
-      return 'Continue o circuito principal na Sala 1 (robótica)';
-    }
-    
-    // Caso padrão - sempre pode ir pra quadra
-    return 'Quadra -  grupos do 6º, 7º e 8º ano OU continue o circuito principal';
   };
 
   if (!session) {
@@ -321,6 +269,9 @@ const IndexPage = () => {
             src="/logo-upverse.png" 
             alt="UPverse Logo" 
             className="w-32 h-32 object-contain"
+            style={{
+              filter: 'drop-shadow(0 0 15px rgba(59, 130, 246, 0.3))'
+            }}
           />
         </div>
 
@@ -356,30 +307,22 @@ const IndexPage = () => {
             <img 
               src="/logo-upverse.png" 
               alt="Puzzle Background" 
-              className="absolute inset-0 w-full h-full object-contain opacity-80"
+              className="absolute inset-0 w-full h-full object-contain opacity-20 grayscale"
             />
             
-            <div className="relative grid grid-cols-6 gap-0 aspect-[3/2]">
-              {(() => {
-                // Ordem fixa embaralhada (índices de 0 a 23)
-                const shuffledOrder = [14, 7, 19, 2, 11, 23, 5, 16, 0, 22, 9, 3, 17, 12, 6, 20, 1, 15, 8, 21, 13, 4, 18, 10];
-                
-                return shuffledOrder.map((index) => {
-                  const piece = puzzlePieces[index];
-                  return (
-                    <div
-                      key={piece.id}
-                      className={`
-                        border border-white/20 rounded-sm transition-all duration-300
-                        ${piece.collected 
-                          ? 'bg-transparent' 
-                          : 'bg-black/95 backdrop-blur-sm'
-                        }
-                      `}
-                    />
-                  );
-                });
-              })()}
+            <div className="relative grid grid-cols-6 gap-1 aspect-[3/2]">
+              {puzzlePieces.slice(0, 24).map((piece) => (
+                <div
+                  key={piece.id}
+                  className={`
+                    border border-white/20 rounded-sm transition-all duration-300
+                    ${piece.collected 
+                      ? 'bg-transparent' 
+                      : 'bg-gray-800/80 backdrop-blur-sm'
+                    }
+                  `}
+                />
+              ))}
             </div>
           </div>
         </div>

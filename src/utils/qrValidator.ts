@@ -1,3 +1,11 @@
+interface PuzzlePiece {
+  id: number;
+  turma: string;
+  grupo: string;
+  collected: boolean;
+  tema: string;
+  qrCode: string;
+}
 export interface QRStep {
   code: string;
   location: string;
@@ -9,8 +17,8 @@ export interface QRStep {
 export const qrSequenceRequired: QRStep[] = [
   { code: '9º ano grupo 1', location: 'Sala 1', turma: '9º', grupo: '1' },
   { code: '9º ano grupo 2', location: 'Sala 1', turma: '9º', grupo: '2' },
+  { code: '2ª série grupo 4', location: 'Sala 2', turma: '2ª', grupo: '4' },
   { code: '2ª série grupo 5', location: 'Sala 2', turma: '2ª', grupo: '5' },
-  { code: '2ª série grupo 6', location: 'Sala 2', turma: '2ª', grupo: '6' },
   { code: '1ª série grupo 1', location: 'Sala 3', turma: '1ª', grupo: '1' },
   { code: '1ª série grupo 2', location: 'Sala 3', turma: '1ª', grupo: '2' },
   { code: '1ª série grupo 3', location: 'Sala 4', turma: '1ª', grupo: '3' },
@@ -51,9 +59,9 @@ export interface ValidationResult {
 
 export const validateQRCode = (
   decodedText: string,
-  collectedPieces: number
+  puzzlePieces: PuzzlePiece[]
 ): ValidationResult => {
-  // 1. Verificar se é um código válido da UPverse
+  // 1. Verificar se é um código válido
   const foundCode = allValidCodes.find(qr => qr.code === decodedText);
   
   if (!foundCode) {
@@ -63,26 +71,25 @@ export const validateQRCode = (
     };
   }
 
-  // 2. Verificar se já foi coletado (verificação será feita no IndexPage)
+  // 2. Peças da quadra são SEMPRE válidas
+  const isQuadraPiece = qrSequenceQuadra.find(qr => qr.code === decodedText);
+  if (isQuadraPiece) {
+    return {
+      isValid: true,
+      pieceInfo: foundCode
+    };
+  }
+
+  // 3. Circuito principal - contar apenas peças do circuito já coletadas
+  const mainCircuitCollected = puzzlePieces.slice(0, 14).filter(p => p.collected).length;
+  const pieceIndex = qrSequenceRequired.findIndex(qr => qr.code === decodedText);
   
-  // 3. Verificar ordem sequencial (primeiros 14 códigos)
-  if (collectedPieces < 14) {
-    const expectedCode = qrSequenceRequired[collectedPieces];
-    
-    if (decodedText !== expectedCode.code) {
-      return {
-        isValid: false,
-        error: `⚠️ Ordem incorreta!\n\nVocê deve escanear primeiro:\n"${expectedCode.code}"\n📍 ${expectedCode.location}`
-      };
-    }
-  } else {
-    // Após 14 peças, apenas verificar se está na quadra
-    if (!qrSequenceQuadra.find(qr => qr.code === decodedText)) {
-      return {
-        isValid: false,
-        error: '⚠️ Este grupo não faz parte da etapa atual.'
-      };
-    }
+  if (pieceIndex !== mainCircuitCollected) {
+    const expectedCode = qrSequenceRequired[mainCircuitCollected];
+    return {
+      isValid: false,
+      error: `Ordem incorreta no circuito principal!\nVocê deve escanear:\n"${expectedCode.code}" na ${expectedCode.location}`
+    };
   }
 
   return {

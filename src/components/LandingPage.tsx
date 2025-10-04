@@ -213,7 +213,7 @@ const LandingPage = () => {
             Colégio UP • Macaé
           </p>
           <p className="text-xl md:text-2xl text-blue-300 font-semibold mt-3">
-            4 de setembro de 2025
+            4 de outubro de 2025
           </p>
         </div>
         
